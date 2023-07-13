@@ -1,0 +1,33 @@
+{
+  "name": "strapi-chat",
+  "private": true,
+  "version": "0.1.0",
+  "description": "A Strapi application",
+  "scripts": {
+    "develop": "strapi develop",
+    "start": "strapi start",
+    "build": "strapi build",
+    "strapi": "strapi"
+  },
+  "dependencies": {
+    "@pinecone-database/pinecone": "^0.1.6",
+    "@strapi/plugin-i18n": "4.11.2",
+    "@strapi/plugin-users-permissions": "4.11.2",
+    "@strapi/strapi": "4.11.2",
+    "@supabase/supabase-js": "^2.26.0",
+    "langchain": "^0.0.96",
+    "pg": "^8.11.1",
+    "pinia": "^2.1.4"
+  },
+  "author": {
+    "name": "A Strapi developer"
+  },
+  "strapi": {
+    "uuid": "6042fe9b-ef46-4e24-8fc9-da446a0d317f"
+  },
+  "engines": {
+    "node": ">=14.19.1 <=18.x.x",
+    "npm": ">=6.0.0"
+  },
+  "license": "MIT"
+}
