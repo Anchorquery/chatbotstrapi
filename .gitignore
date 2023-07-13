@@ -1,5 +1,6 @@
 serve/node_modules
 serve/test
+serve/frontend
 frontend/*
 app/node_modules
 serve/.pnp
