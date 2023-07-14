@@ -37,6 +37,24 @@ module.exports = {
       },
     },
     {
+      method: "POST",
+      path: "/strapi-chat/upload-file",
+      handler: "strapi-chat.uploadFile",
+      config: {
+        policies: [],
+        middlewares: [],
+      },
+    },
+    {
+      method: "POST",
+      path: "/strapi-chat/inscrustacion-url",
+      handler: "strapi-chat.incrustacionUrl",
+      config: {
+        policies: [],
+        middlewares: [],
+      },
+    },
+    {
       method: "GET",
       path: "/strapi-chat/get-all-sessions",
       handler: "strapi-chat.getAllSessions",

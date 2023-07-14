@@ -123,25 +123,21 @@
                     class="_chat_1qglh_1"
                     style="height: 100%; margin-top: 30px"
                   >
-                    <div style="display: flex;">
-                      <v-file-input
-                        label="File input"
-                        variant="solo"
-                        width = "70%"
-                        prepend-icon="mdi-paperclip"
-                        accept="image/*, application/pdf"
-                        v-model="file"
-                        @change="onFileChange"
+                    <v-row
+                      align="center"
+                      justify="center"
+                      style="margin-bottom: 20px"
+                    >
+                      <v-col cols="auto">
+                        <v-btn density="default" icon="mdi-file" @click="openModalFile"></v-btn>
+                      </v-col>
 
-                      ></v-file-input>
-                      <v-btn
-                        @click="uploadFile()"
-                        class="_button_194hd_2 _outlined_194hd_112 _small_194hd_37"
-                        text
-                      >
-                        <v-icon>mdi-upload</v-icon>
-                      </v-btn>
-                    </div>
+                      <v-col cols="auto">
+                        <v-btn density="default" icon="mdi-web" @click="openURLModal"></v-btn>
+
+                      </v-col>
+                    </v-row>
+
 
                     <v-virtual-scroll
                       :height="350"
@@ -198,7 +194,7 @@
                       </template>
                     </v-virtual-scroll>
 
-                    <form class="_form_1qglh_138" @submit.prevent="sendMessage">
+                    <form class="_form_1qglh_138" @submit.prevent="sendMessage(2)">
                       <input
                         type="text"
                         v-model="newMessage"
@@ -231,25 +227,72 @@
           </v-col>
         </v-row>
       </v-container>
-      <v-dialog
-      v-model="dialog"
-      
-      persistent
-      width="auto"
-    >
-      <v-card
-        color="primary"
-      >
-        <v-card-text>
-          Cargando ...
-          <v-progress-linear
-            indeterminate
-            color="white"
-            class="mb-0"
-          ></v-progress-linear>
-        </v-card-text>
-      </v-card>
-    </v-dialog>
+      <v-dialog v-model="dialog" max-width="400px">
+        <v-card>
+          <v-card-text>
+            <v-row justify="center">
+              <v-col cols="12" class="text-center">
+                <div v-if="uploadProgress < 100">
+                  <v-progress-circular
+                    :size="70"
+                    :width="7"
+                    :value="uploadProgress"
+                    color="primary"
+                  ></v-progress-circular>
+                  <div class="mt-2">Uploading...</div>
+                </div>
+                <div v-else>
+                  <v-icon large color="success"
+                    >mdi-check-circle-outline</v-icon
+                  >
+                  <div class="mt-2">Upload completed!</div>
+                </div>
+              </v-col>
+            </v-row>
+          </v-card-text>
+        </v-card>
+      </v-dialog>
+      <v-dialog v-model="modalOpenFile" max-width="500">
+    <v-card>
+      <v-card-title>Select Files to Upload</v-card-title>
+      <v-card-text>
+        <div style="display: flex">
+          <v-file-input
+            label="File input"
+            variant="solo"
+            width="70%"
+            prepend-icon="mdi-paperclip"
+            accept="application/pdf, application/vnd.google-apps.document, application/vnd.openxmlformats-officedocument.wordprocessingml.document, text/plain, text/csv"
+            v-model="files"
+            :multiple="true"
+          ></v-file-input>
+          <v-btn
+            @click="uploadFile()"
+            class="_button_194hd_2 _outlined_194hd_112 _small_194hd_37"
+            text
+          >
+            <v-icon>mdi-upload</v-icon>
+          </v-btn>
+        </div>
+      </v-card-text>
+    </v-card>
+  </v-dialog>
+  <v-dialog v-model="urlModalOpen" max-width="500">
+    <v-card>
+      <v-card-title>Enter URL</v-card-title>
+      <v-card-text>
+        <v-text-field
+          label="URL"
+          v-model="url"
+          outlined
+        ></v-text-field>
+      </v-card-text>
+      <v-card-actions>
+        <v-btn @click="processURL">Submit</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+
     </v-main>
   </v-app>
 </template>
@@ -274,7 +317,10 @@ export default {
   },
   data() {
     return {
+      url: "",
       dialog: false,
+      modalOpenFile: false,
+      urlModalOpen: false,
       tab: null,
       tabs: [
         {
@@ -283,10 +329,12 @@ export default {
         },
         {
           value: "2",
-          text: "PDF",
+          text: "Embedding",
         },
       ],
-      file: "",
+
+      files: [],
+      uploadProgress: 0,
 
       selectedLanguage: { id: 1, name: "Español" },
       selectedTone: { id: 0.7, name: "Defecto", selected: true },
@@ -314,37 +362,77 @@ export default {
     };
   },
   methods: {
+    openModalFile() {
+      this.modalOpenFile = true;
+    },
+    openURLModal() {
+      this.urlModalOpen = true;
 
+    },
+    async processURL (){
+
+      try {
+
+        if (!this.url) return;
+
+
+        await axios.post("/strapi-chat/inscrustacion-url", {url: this.url});
+
+        this.urlModalOpen = false;
+        
+      } catch (error) {
+
+        console.log(error);
+
+        this.urlModalOpen = false;
+        
+      }
+
+    },    
     async uploadFile() {
       try {
-        
-    this.dialog = true;
-
+        if (this.files.length == 0) return;
+        this.dialog = true;
         let formData = new FormData();
 
-        // agrego el archivo
+        if (this.files.length === 1) {
+          // Si solo hay un archivo, agrégalo directamente a formData sin iterar
+          const file = this.files[0];
+          formData.append("files[]", file , file.name);
+        } else {
+          // Si hay múltiples archivos, itera sobre ellos y agrégalos a formData
+          for (let file of this.files) {
+            formData.append("files[]", file, file.name);
+          }
+        }
 
-        formData.append("file", this.file);
-
-        // subo el archivo
-
-         await axios.post("/strapi-chat/upload-file", formData, {
+        await axios.post("/strapi-chat/upload-file", formData, {
           headers: {
             "Content-Type": "multipart/form-data",
           },
+          onUploadProgress: (progressEvent) => {
+            const percentage = Math.round(
+              (progressEvent.loaded * 100) / progressEvent.total
+            );
+
+            // Actualizar el porcentaje de carga en el popup
+            this.uploadProgress = percentage;
+          },
         });
 
+        setTimeout(() => {
+          this.uploadProgress = 0;
+        }, 2000);
         this.dialog = false;
-        // obtengo el texto del archivo
+        this.modalOpenFile = false;
       } catch (error) {
+        this.dialog = false;
+        this.modalOpenFile = false;
         console.log(error);
       }
     },
-
     onFileChange(e) {
-      let files = e.target.files || e.dataTransfer.files;
-      if (!files.length) return;
-      this.createImage(files[0]);
+      this.files = e.target.files;
     },
 
     onQuillReady(quill) {
@@ -355,7 +443,7 @@ export default {
 
       quill.setContents(quill.clipboard.convert(texto));
     },
-    async sendMessage() {
+    async sendMessage(type = 1) {
       if (this.newMessage) {
         try {
           let data = {
@@ -363,9 +451,10 @@ export default {
             message: this.newMessage,
             language: this.selectedLanguage.name,
             tone: this.selectedTone.id,
-            type: "chat",
+            history: this.messages,
+            type:   type == 1 ? "chat" : "emberding",
           };
-          console.log(data);
+
           this.messages.push({
             sender: "You",
             content: this.newMessage,
@@ -376,10 +465,10 @@ export default {
           let response = await axios.post("/strapi-chat/chat", { data });
 
           localStorage.setItem("sessionId", response.data.data.sessionId);
-
+console.log(response.data);
           this.messages.push({
             sender: "Rytr",
-            content: response.data.data.response,
+            content:type == 1 ? response.data.data.response : response.data.data.text,
             time: new Date().toLocaleTimeString(),
           });
         } catch (error) {
@@ -401,6 +490,8 @@ export default {
 
         let mensajes = response.data.data?.history;
 
+        if (!mensajes) return;
+
         mensajes.forEach((element, index) => {
           //salto el primer mensaje que es el de bienvenida
           if (index == 0) return;
@@ -420,7 +511,9 @@ export default {
             time: new Date().toLocaleTimeString(),
           });
         });
-      } catch (error) {}
+      } catch (error) {
+        console.log(error);
+      }
     },
   },
   async mounted() {
@@ -474,5 +567,8 @@ body::-webkit-scrollbar {
   transition-duration: 0.2s;
   height: 2.5rem;
   padding: 0 0.5rem;
+}
+button:focus, button:focus-visible {
+     outline: none; 
 }
 </style>

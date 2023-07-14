@@ -15,9 +15,13 @@
     "@strapi/plugin-users-permissions": "4.11.2",
     "@strapi/strapi": "4.11.2",
     "@supabase/supabase-js": "^2.26.0",
+    "cheerio": "^1.0.0-rc.12",
     "langchain": "^0.0.96",
+    "pdf-parse": "^1.1.1",
     "pg": "^8.11.1",
-    "pinia": "^2.1.4"
+    "pinia": "^2.1.4",
+    "playwright": "^1.36.0",
+    "puppeteer": "^19.11.1"
   },
   "author": {
     "name": "A Strapi developer"

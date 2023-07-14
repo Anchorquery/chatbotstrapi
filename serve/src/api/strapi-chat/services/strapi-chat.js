@@ -18,10 +18,6 @@ function configureLangChainChat(apiKey, config = {}) {
   
   const memory = new BufferMemory();
 
-
-
-
-
   const model = new OpenAI({
     openAIApiKey: apiKey,
     modelName: "gpt-3.5-turbo" || config.modelName,
@@ -58,6 +54,7 @@ async function generateSession(apiKey , config = {}) {
       If you are stuck, ask for help.
       Ask questions to learn more about the topic and conversation.
       Anwser in: {language}
+      use Markdown to format your messages.
   `;
 
   const initializedPrompt = new PromptTemplate({ template, inputVariables: ["input","language"]  });
@@ -106,6 +103,8 @@ async function updateExistingChat(sessionId, history, strapi) {
       .service("api::chat.chat")
       .update(id, { data: { history: JSON.stringify(history.messages) } });
 }
+
+
 
 module.exports = ({ strapi }) => ({
   chat: async (ctx) => {
