@@ -18,8 +18,7 @@ module.exports = {
         .chat(ctx);
     }else{
 
-      // si es inscrustacion 
-console.log("es inscrustacion");
+    
       response = await strapi.service('api::strapi-chat.chat-embading').makeChain(ctx);
 
     }
@@ -36,6 +35,11 @@ console.log("es inscrustacion");
 
   getSessionById: async (ctx) => {
     try {
+
+      if (!ctx.params.sessionId) {
+        throw new Error('id is required');
+      }
+
       const response = await strapi
         .service('api::strapi-chat.strapi-chat')
         .getSessionById(ctx);

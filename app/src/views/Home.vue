@@ -108,6 +108,7 @@
                         v-model="newMessage"
                         placeholder="Enter your message..."
                         maxlength="300"
+                        :disabled="statusMessage"
                       />
                       <button type="submit">
                         <v-icon>mdi-send</v-icon>
@@ -115,6 +116,15 @@
                       <button type="button" class="_clear_1qglh_173">
                         <v-icon>mdi-close</v-icon>
                       </button>
+
+                      <div v-if="statusMessage" class="lds-ellipsis">
+                        <div></div>
+                        <div></div>
+                        <div></div>
+                        <div></div>
+                      </div>
+                      
+
                     </form>
                   </div>
                 </v-window-item>
@@ -129,15 +139,21 @@
                       style="margin-bottom: 20px"
                     >
                       <v-col cols="auto">
-                        <v-btn density="default" icon="mdi-file" @click="openModalFile"></v-btn>
+                        <v-btn
+                          density="default"
+                          icon="mdi-file"
+                          @click="openModalFile"
+                        ></v-btn>
                       </v-col>
 
                       <v-col cols="auto">
-                        <v-btn density="default" icon="mdi-web" @click="openURLModal"></v-btn>
-
+                        <v-btn
+                          density="default"
+                          icon="mdi-web"
+                          @click="openURLModal"
+                        ></v-btn>
                       </v-col>
                     </v-row>
-
 
                     <v-virtual-scroll
                       :height="350"
@@ -194,7 +210,10 @@
                       </template>
                     </v-virtual-scroll>
 
-                    <form class="_form_1qglh_138" @submit.prevent="sendMessage(2)">
+                    <form
+                      class="_form_1qglh_138"
+                      @submit.prevent="sendMessage(2)"
+                    >
                       <input
                         type="text"
                         v-model="newMessage"
@@ -253,46 +272,41 @@
         </v-card>
       </v-dialog>
       <v-dialog v-model="modalOpenFile" max-width="500">
-    <v-card>
-      <v-card-title>Select Files to Upload</v-card-title>
-      <v-card-text>
-        <div style="display: flex">
-          <v-file-input
-            label="File input"
-            variant="solo"
-            width="70%"
-            prepend-icon="mdi-paperclip"
-            accept="application/pdf, application/vnd.google-apps.document, application/vnd.openxmlformats-officedocument.wordprocessingml.document, text/plain, text/csv"
-            v-model="files"
-            :multiple="true"
-          ></v-file-input>
-          <v-btn
-            @click="uploadFile()"
-            class="_button_194hd_2 _outlined_194hd_112 _small_194hd_37"
-            text
-          >
-            <v-icon>mdi-upload</v-icon>
-          </v-btn>
-        </div>
-      </v-card-text>
-    </v-card>
-  </v-dialog>
-  <v-dialog v-model="urlModalOpen" max-width="500">
-    <v-card>
-      <v-card-title>Enter URL</v-card-title>
-      <v-card-text>
-        <v-text-field
-          label="URL"
-          v-model="url"
-          outlined
-        ></v-text-field>
-      </v-card-text>
-      <v-card-actions>
-        <v-btn @click="processURL">Submit</v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
-
+        <v-card>
+          <v-card-title>Select Files to Upload</v-card-title>
+          <v-card-text>
+            <div style="display: flex">
+              <v-file-input
+                label="File input"
+                variant="solo"
+                width="70%"
+                prepend-icon="mdi-paperclip"
+                accept="application/pdf, application/vnd.google-apps.document, application/vnd.openxmlformats-officedocument.wordprocessingml.document, text/plain, text/csv"
+                v-model="files"
+                :multiple="true"
+              ></v-file-input>
+              <v-btn
+                @click="uploadFile()"
+                class="_button_194hd_2 _outlined_194hd_112 _small_194hd_37"
+                text
+              >
+                <v-icon>mdi-upload</v-icon>
+              </v-btn>
+            </div>
+          </v-card-text>
+        </v-card>
+      </v-dialog>
+      <v-dialog v-model="urlModalOpen" max-width="500">
+        <v-card>
+          <v-card-title>Enter URL</v-card-title>
+          <v-card-text>
+            <v-text-field label="URL" v-model="url" outlined></v-text-field>
+          </v-card-text>
+          <v-card-actions>
+            <v-btn @click="processURL">Submit</v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
     </v-main>
   </v-app>
 </template>
@@ -300,16 +314,27 @@
 import { QuillEditor } from "@vueup/vue-quill";
 import "@vueup/vue-quill/dist/vue-quill.snow.css";
 import "@vueup/vue-quill/dist/vue-quill.bubble.css";
-import qs from "qs";
+import { io } from "socket.io-client";
 import axios from "axios";
-axios.defaults.baseURL = "http://localhost:1337/api";
+import { toast } from "vue3-toastify";
+import "vue3-toastify/dist/index.css";
+const { VITE_API_URL, VITE_SOCKET_URL } = import.meta.env;
+axios.defaults.baseURL = VITE_API_URL;
+
 axios.defaults.headers.post["Content-Type"] =
   "application/x-www-form-urlencoded";
 axios.defaults.headers.common["Authorization"] = `Bearer ${localStorage.getItem(
   "authorization"
 )}`;
 
-// activo autenticacion
+/*const socket = io(VITE_SOCKET_URL, {
+  extraHeaders: {
+    Authorization: `Bearer ${localStorage.getItem("authorization")}`,
+  },
+  query: { token: localStorage.getItem("authorization") },
+  autoConnect: true,
+  //transports: ["websocket"],
+});*/
 
 export default {
   components: {
@@ -317,6 +342,7 @@ export default {
   },
   data() {
     return {
+      statusMessage: false,
       url: "",
       dialog: false,
       modalOpenFile: false,
@@ -365,30 +391,40 @@ export default {
     openModalFile() {
       this.modalOpenFile = true;
     },
+    notify(text, type = "success") {
+      toast[type](text, {
+        position: "top-right",
+        timeout: 2000,
+        closeOnClick: true,
+        pauseOnFocusLoss: true,
+        pauseOnHover: true,
+        draggable: true,
+        draggablePercent: 0.6,
+        showCloseButtonOnHover: false,
+        hideProgressBar: false,
+        closeButton: "button",
+        color: "#000000",
+        icon: true,
+        rtl: false,
+        bodyClassName: "toastify-body",
+      });
+    },
     openURLModal() {
       this.urlModalOpen = true;
-
     },
-    async processURL (){
-
+    async processURL() {
       try {
-
         if (!this.url) return;
 
-
-        await axios.post("/strapi-chat/inscrustacion-url", {url: this.url});
+        await axios.post("/strapi-chat/inscrustacion-url", { url: this.url });
 
         this.urlModalOpen = false;
-        
       } catch (error) {
-
         console.log(error);
 
         this.urlModalOpen = false;
-        
       }
-
-    },    
+    },
     async uploadFile() {
       try {
         if (this.files.length == 0) return;
@@ -398,7 +434,7 @@ export default {
         if (this.files.length === 1) {
           // Si solo hay un archivo, agrégalo directamente a formData sin iterar
           const file = this.files[0];
-          formData.append("files[]", file , file.name);
+          formData.append("files[]", file, file.name);
         } else {
           // Si hay múltiples archivos, itera sobre ellos y agrégalos a formData
           for (let file of this.files) {
@@ -444,15 +480,17 @@ export default {
       quill.setContents(quill.clipboard.convert(texto));
     },
     async sendMessage(type = 1) {
+      console.log(this.newMessage);
       if (this.newMessage) {
         try {
+          this.statusMessage = true;
           let data = {
             sessionId: localStorage.getItem("sessionId") || null,
             message: this.newMessage,
             language: this.selectedLanguage.name,
             tone: this.selectedTone.id,
             history: this.messages,
-            type:   type == 1 ? "chat" : "emberding",
+            type: type == 1 ? "chat" : "emberding",
           };
 
           this.messages.push({
@@ -462,27 +500,57 @@ export default {
           });
 
           this.newMessage = "";
+          /* socket.emit("sendMessage", data);
+
+          socket.on("responseMessage", (data) => {
+            console.log(data);
+            localStorage.setItem("sessionId", data.sessionId);
+
+            this.messages.push({
+              sender: "Rytr",
+              content:
+                type == 1
+                  ? data.response
+                  : data.text,
+              time: new Date().toLocaleTimeString(),
+            });
+          });*/
           let response = await axios.post("/strapi-chat/chat", { data });
 
           localStorage.setItem("sessionId", response.data.data.sessionId);
-console.log(response.data);
+
           this.messages.push({
             sender: "Rytr",
-            content:type == 1 ? response.data.data.response : response.data.data.text,
+            content:
+              type == 1 ? response.data.data.response : response.data.data.text,
             time: new Date().toLocaleTimeString(),
           });
+          this.statusMessage = false;
+
         } catch (error) {
           console.log(error);
+          this.statusMessage = false;
         }
       }
     },
     async recoveryHistoryChat() {
       try {
-        // verifico si en el localstorage existe el sessionId
+        var sessionId = (await localStorage.getItem("sessionId")) || null;
 
-        if (!localStorage.getItem("sessionId")) return;
+        if (sessionId === null || sessionId === undefined || sessionId === "") {
+          return;
+        }
 
-        let sessionId = localStorage.getItem("sessionId");
+        if (
+          sessionId == undefined ||
+          sessionId == null ||
+          sessionId == "null" ||
+          sessionId == "undefined"
+        ) {
+          localStorage.removeItem("sessionId");
+
+          return;
+        }
 
         let response = await axios.get(
           `/strapi-chat/get-session-by-id/${sessionId}`
@@ -518,6 +586,15 @@ console.log(response.data);
   },
   async mounted() {
     await this.recoveryHistoryChat();
+    /*console.log("mounted");
+    socket.connect();
+    socket.on("connect", () => {
+      this.notify("Connection Success");
+    });
+    socket.emit("connection", "data");
+    socket.onDisconnect((_) => print("Connection Disconnection"));
+    socket.onConnectError((err) => print(err));
+    socket.onError((err) => print(err));*/
   },
   computed: {
     Authorization() {
@@ -568,7 +645,79 @@ body::-webkit-scrollbar {
   height: 2.5rem;
   padding: 0 0.5rem;
 }
-button:focus, button:focus-visible {
-     outline: none; 
+button:focus,
+button:focus-visible {
+  outline: none;
 }
+.toastify-body {
+  color: #000000 !important;
+}
+.Toastify__toast-theme--colored.Toastify__toast--success {
+  background: #00b894 !important;
+  color: #000000 !important;
+}
+.lds-ellipsis {
+  display: inline-block;
+  position: relative;
+  width: 80px;
+  height: 80px;
+}
+.lds-ellipsis div {
+  position: absolute;
+  top: 33px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: #00b894;
+  animation-timing-function: cubic-bezier(0, 1, 1, 0);
+}
+
+.lds-ellipsis div:nth-child(1) {
+  left: 8px;
+  animation: lds-ellipsis1 0.6s infinite;
+}
+
+.lds-ellipsis div:nth-child(2) {
+  left: 8px;
+  animation: lds-ellipsis2 0.6s infinite;
+}
+
+.lds-ellipsis div:nth-child(3) {
+  left: 32px;
+  animation: lds-ellipsis2 0.6s infinite;
+}
+
+.lds-ellipsis div:nth-child(4) {
+  left: 56px;
+  animation: lds-ellipsis3 0.6s infinite;
+}
+
+@keyframes lds-ellipsis1 {
+  0% {
+    transform: scale(0);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes lds-ellipsis3 {
+  0% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(0);
+  }
+}
+
+@keyframes lds-ellipsis2 {
+  0% {
+    transform: translate(0, 0);
+  }
+  100% {
+    transform: translate(24px, 0);
+  }
+}
+
+
 </style>

@@ -13,17 +13,30 @@ const { v4: uuidv4 } = require('uuid');
 
 const  { apiKey:OPENAI_API_KEY } = process.env;
 
-function configureLangChainChat(apiKey, config = {}) {
+function configureLangChainChat(apiKey, config = {} ,socket = null) {
   
   
   const memory = new BufferMemory();
-
+  let streamedResponse = "";
   const model = new OpenAI({
     openAIApiKey: apiKey,
     modelName: "gpt-3.5-turbo" || config.modelName,
     temperature: config.tone ?  Number(config.tone):  0.7,
     timeout: 45000,
     streaming: false,
+    callbacks: [
+      {
+        handleLLMNewToken(token) {
+          
+          streamedResponse += token;
+          if(socket){
+            socket.emit('responseMessage', { message: streamedResponse });
+          }
+
+        },
+      },
+    ],
+
    
   });
 
@@ -39,13 +52,13 @@ function configureLangChainChat(apiKey, config = {}) {
   }
 }
 
-async function generateSession(apiKey , config = {}) {
+async function generateSession(apiKey , config = {} ,socket = false) {
 
   const sessionId = uuidv4();
 
   const language = config.language || "English";
 
-  const template = `
+ /* const template = `
     system: Your name is {input}, you are playing a human character who is witty, snarky and very smart.
 
     Directions: 
@@ -54,13 +67,14 @@ async function generateSession(apiKey , config = {}) {
       If you are stuck, ask for help.
       Ask questions to learn more about the topic and conversation.
       Anwser in: {language}
-      use Markdown to format your messages.
-  `;
+  `;*/
 
-  const initializedPrompt = new PromptTemplate({ template, inputVariables: ["input","language"]  });
+  const template = `¡Hola! Soy ChatGPT, un modelo de lenguaje de inteligencia artificial. Estoy aquí para ayudarte con tus preguntas y brindarte información sobre una amplia gama de temas. ¿En qué puedo asistirte hoy?, responde en: {language}`;
 
-  const initialPrompt = await initializedPrompt.format({ input: "Ava", language: language });
-  const langChain = configureLangChainChat(apiKey, config)
+  const initializedPrompt = new PromptTemplate({ template, inputVariables: ["language"]  });
+
+  const initialPrompt = await initializedPrompt.format({  language: language });
+  const langChain = configureLangChainChat(apiKey, config, socket)
   await sessionManager.saveSession(sessionId, langChain.chain, initialPrompt)
   return sessionId;
 }
@@ -111,6 +125,8 @@ module.exports = ({ strapi }) => ({
     const user = ctx.state.user;
     let {tone, sessionId, language,message} = ctx.request.body.data;
 
+    let socket = ctx.socket;
+
 
     const existingSession = await sessionManager.sessions[sessionId];
 
@@ -122,7 +138,7 @@ module.exports = ({ strapi }) => ({
       const apiToken = process.env.OPENAI_API_KEY;
       if (!apiToken) throw new Error("OpenAI API Key not found");
 
-      sessionId = await generateSession(apiToken, {tone:tone, language: language });
+      sessionId = await generateSession(apiToken, {tone:tone, language: language },socket);
 
       const newSession = await sessionManager.getSession(sessionId);
 
