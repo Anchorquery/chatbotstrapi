@@ -13,29 +13,16 @@ const { v4: uuidv4 } = require('uuid');
 
 const  { apiKey:OPENAI_API_KEY } = process.env;
 
-function configureLangChainChat(apiKey, config = {} ,socket = null) {
+function configureLangChainChat(apiKey, config = {} ) {
   
   
   const memory = new BufferMemory();
-  let streamedResponse = "";
+
   const model = new OpenAI({
     openAIApiKey: apiKey,
     modelName: "gpt-3.5-turbo" || config.modelName,
     temperature: config.tone ?  Number(config.tone):  0.7,
     timeout: 45000,
-    streaming: false,
-    callbacks: [
-      {
-        handleLLMNewToken(token) {
-          
-          streamedResponse += token;
-          if(socket){
-            socket.emit('responseMessage', { message: streamedResponse });
-          }
-
-        },
-      },
-    ],
 
    
   });
@@ -52,7 +39,7 @@ function configureLangChainChat(apiKey, config = {} ,socket = null) {
   }
 }
 
-async function generateSession(apiKey , config = {} ,socket = false) {
+async function generateSession(apiKey , config = {} ) {
 
   const sessionId = uuidv4();
 
@@ -74,7 +61,7 @@ async function generateSession(apiKey , config = {} ,socket = false) {
   const initializedPrompt = new PromptTemplate({ template, inputVariables: ["language"]  });
 
   const initialPrompt = await initializedPrompt.format({  language: language });
-  const langChain = configureLangChainChat(apiKey, config, socket)
+  const langChain = configureLangChainChat(apiKey, config)
   await sessionManager.saveSession(sessionId, langChain.chain, initialPrompt)
   return sessionId;
 }
@@ -138,7 +125,7 @@ module.exports = ({ strapi }) => ({
       const apiToken = process.env.OPENAI_API_KEY;
       if (!apiToken) throw new Error("OpenAI API Key not found");
 
-      sessionId = await generateSession(apiToken, {tone:tone, language: language },socket);
+      sessionId = await generateSession(apiToken, {tone:tone, language: language });
 
       const newSession = await sessionManager.getSession(sessionId);
 
