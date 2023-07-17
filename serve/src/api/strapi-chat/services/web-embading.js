@@ -22,7 +22,7 @@ module.exports = ({ strapi }) => ({
 			let loader = null;
 			if (!type) {
 
-				type = 'puppeteer';
+				type = 'cheerio';
 
 			}
 			if (type == 'cheerio') {
