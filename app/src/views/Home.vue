@@ -347,6 +347,15 @@ axios.defaults.headers.common["Authorization"] = `Bearer ${localStorage.getItem(
   "authorization"
 )}`;
 
+// configuro cors
+
+axios.defaults.headers.common["Access-Control-Allow-Origin"] = "*";
+
+// configuro el dominio cruzado
+
+axios.defaults.headers.common["Access-Control-Allow-Headers"] =
+  "Origin, X-Requested-With, Content-Type, Accept";
+
 /*const socket = io(VITE_SOCKET_URL, {
   extraHeaders: {
     Authorization: `Bearer ${localStorage.getItem("authorization")}`,
