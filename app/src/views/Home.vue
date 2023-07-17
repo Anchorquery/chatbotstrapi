@@ -108,22 +108,23 @@
                         v-model="newMessage"
                         placeholder="Enter your message..."
                         maxlength="300"
-                        :disabled="statusMessage"
+                        :disabled="statusSend"
                       />
-                      <button type="submit">
+                      <div v-if="!statusSend" style="display: flex;">
+                        <button type="submit" >
                         <v-icon>mdi-send</v-icon>
                       </button>
                       <button type="button" class="_clear_1qglh_173">
                         <v-icon>mdi-close</v-icon>
                       </button>
+                      </div>
 
-                      <div v-if="statusMessage" class="lds-ellipsis">
+                      <div v-if="statusSend" class="lds-ellipsis">
                         <div></div>
                         <div></div>
                         <div></div>
                         <div></div>
                       </div>
-                      
 
                     </form>
                   </div>
@@ -220,12 +221,22 @@
                         placeholder="Enter your message..."
                         maxlength="300"
                       />
-                      <button type="submit">
+                      <div v-if="!statusSend" style="display: flex;">
+                        <button type="submit" >
                         <v-icon>mdi-send</v-icon>
                       </button>
                       <button type="button" class="_clear_1qglh_173">
                         <v-icon>mdi-close</v-icon>
                       </button>
+                      </div>
+
+                      <div v-if="statusSend" class="lds-ellipsis">
+                        <div></div>
+                        <div></div>
+                        <div></div>
+                        <div></div>
+                      </div>
+
                     </form>
                   </div>
                 </v-window-item>
@@ -303,7 +314,16 @@
             <v-text-field label="URL" v-model="url" outlined></v-text-field>
           </v-card-text>
           <v-card-actions>
-            <v-btn @click="processURL">Submit</v-btn>
+            
+
+            <div v-if="statusSend" class="lds-ellipsis">
+                        <div></div>
+                        <div></div>
+                        <div></div>
+                        <div></div>
+                      </div>
+                      
+                      <v-btn v-else @click="processURL">Submit</v-btn>
           </v-card-actions>
         </v-card>
       </v-dialog>
@@ -342,7 +362,7 @@ export default {
   },
   data() {
     return {
-      statusMessage: false,
+      statusSend: false,
       url: "",
       dialog: false,
       modalOpenFile: false,
@@ -414,19 +434,25 @@ export default {
     },
     async processURL() {
       try {
+        this.statusSend = true;
         if (!this.url) return;
 
         await axios.post("/strapi-chat/inscrustacion-url", { url: this.url });
 
         this.urlModalOpen = false;
+        this.statusSend = false;
+        this.notify("URL agregada correctamente");
       } catch (error) {
         console.log(error);
 
         this.urlModalOpen = false;
+        this.statusSend = false;
+        this.notify("Error al agregar la URL", "error");
       }
     },
     async uploadFile() {
       try {
+        
         if (this.files.length == 0) return;
         this.dialog = true;
         let formData = new FormData();
@@ -461,10 +487,12 @@ export default {
         }, 2000);
         this.dialog = false;
         this.modalOpenFile = false;
+        this.notify("Archivo subido correctamente");
       } catch (error) {
         this.dialog = false;
         this.modalOpenFile = false;
         console.log(error);
+        this.notify("Error al subir el archivo", "error");
       }
     },
     onFileChange(e) {
@@ -483,7 +511,7 @@ export default {
       console.log(this.newMessage);
       if (this.newMessage) {
         try {
-          this.statusMessage = true;
+          this.statusSend = true;
           let data = {
             sessionId: localStorage.getItem("sessionId") || null,
             message: this.newMessage,
@@ -525,11 +553,11 @@ export default {
               type == 1 ? response.data.data.response : response.data.data.text,
             time: new Date().toLocaleTimeString(),
           });
-          this.statusMessage = false;
+          this.statusSend = false;
 
         } catch (error) {
           console.log(error);
-          this.statusMessage = false;
+          this.statusSend = false;
         }
       }
     },
