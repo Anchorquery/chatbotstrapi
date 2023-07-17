@@ -101,6 +101,12 @@ module.exports = {
       // Generar un nombre único utilizando uuidv4
       const uniqueName = `${uuidv4()}-${name}`;
 
+      // verifico si el directorio existe
+      if (!fs.existsSync('./docs')) {
+        fs.mkdirSync('./docs');
+      }
+      
+
       // Definir la ruta de destino del archivo
       const uploadPath = `./docs/${uniqueName}`;
 
