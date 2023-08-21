@@ -1,20 +1,27 @@
 import { createRouter, createWebHashHistory, createWebHistory } from 'vue-router';
 
-import {useAuthStore} from '/@/store/index.js';
+
 
 
 const routes = [
   {
-    path: '/',
-    name: 'Home',
-    component: () => import('/@/views/Home.vue'),
-    config: {
-      title: 'Chat',
-
-    },
-    meta: {
-      authenticated: true,
-    }
+    path: "/app",
+    redirect: "/app/home",
+    component: () => import(/* webpackChunkName: "app" */ "/@/views/app/index.vue"),
+    children: [
+      {
+        path: '/app/home',
+        name: 'Home',
+        component: () => import('/@/views/app/CreateCanva.vue'),
+        config: {
+          title: 'Chat',
+    
+        },
+        meta: {
+          authenticated: true,
+        }
+      }
+    ]
   },
   {
     path: '/login',
@@ -47,7 +54,7 @@ const routes = [
 
 Router.beforeEach((to, from, next) => {
 
-  document.title = to.title || "EOOS";
+  document.title = to.title || "trrert";
 
   
 

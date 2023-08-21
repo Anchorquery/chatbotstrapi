@@ -56,7 +56,16 @@ h1 {
   font-size: 3.2em;
   line-height: 1.1;
 }
-
+main{
+  position: fixed;
+    top: 8%;
+    width: 100%;
+    margin: 0!important;
+    padding: 5px!important;
+}
+#app{
+  padding: 0!important;
+}
 button {
   border-radius: 8px;
   border: 1px solid transparent;

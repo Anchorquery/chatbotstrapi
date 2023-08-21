@@ -1,6 +1,6 @@
 <template>
-  <v-app>
-    <v-main>
+
+    <div>
       <v-container fluid>
         <v-row>
           <v-col cols="12" md="5">
@@ -48,7 +48,7 @@
                       </div>
                     </div>
                     <v-virtual-scroll
-                      :height="350"
+                      :height="300"
                       id=""
                       class=""
                       :items="messages"
@@ -327,8 +327,8 @@
           </v-card-actions>
         </v-card>
       </v-dialog>
-    </v-main>
-  </v-app>
+    </div>
+
 </template>
 <script>
 import { QuillEditor } from "@vueup/vue-quill";

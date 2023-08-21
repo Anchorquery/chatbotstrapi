@@ -85,9 +85,9 @@ export const useAuthStore = defineStore('auth', {
         this.guardarUser(data.user);
 
         if (data.user.role.id === '1' || data.user.role.id === '3') {
-          router.push({ name: 'home' });
+          router.push("/app");
         } else {
-          router.push({ name: 'home' });
+          router.push("/app");
         }
       } catch (err) {
         console.log(err);

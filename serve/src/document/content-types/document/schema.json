@@ -1,0 +1,25 @@
+{
+  "kind": "collectionType",
+  "collectionName": "document",
+  "info": {
+    "singularName": "document",
+    "pluralName": "documents",
+    "displayName": "Document",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "content": {
+      "type": "string"
+    },
+    "metadata": {
+      "type": "json"
+    },
+    "embedding": {
+      "type": "vector"
+    }
+  }
+}
