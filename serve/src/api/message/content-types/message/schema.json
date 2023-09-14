@@ -1,0 +1,61 @@
+{
+  "kind": "collectionType",
+  "collectionName": "messages",
+  "info": {
+    "singularName": "message",
+    "pluralName": "messages",
+    "displayName": "message",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+
+    "uuid": {
+      "type": "string",
+      "configurable": false
+    },
+    "datetime": {
+      "type": "datetime"
+    },
+    "chat": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::chat.chat"
+    },
+    "messageRaw": {
+      "type": "json"
+    },
+    "type": {
+      "type": "enumeration",
+      "enum": [
+        "text",
+        "image",
+        "file",
+        "url"
+      ],
+      "default": "text"
+    },
+    "sender": {
+      "type": "enumeration",
+      "enum": [
+        "user",
+        "ia"
+      ],
+      "default": "user"
+    },
+    "content": {
+      "type": "customField",
+      "options": {
+        "output": "Markdown",
+        "preset": "rich"
+      },
+      "customField": "plugin::ckeditor.CKEditor"
+    },
+    "embedding": {
+      "type": "vector"
+    }
+  }
+}

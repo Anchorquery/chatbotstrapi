@@ -8,12 +8,14 @@
     "description": ""
   },
   "options": {
-    "draftAndPublish": true
+    "draftAndPublish": false
   },
   "pluginOptions": {},
   "attributes": {
-    "sessionId": {
-      "type": "string"
+
+    "uuid": {
+      "type": "string",
+      "configurable": false
     },
     "history": {
       "type": "json"
@@ -28,12 +30,22 @@
       "enum": [
         "chat",
         "document",
-        "image"
+        "image",
+        "copy"
       ],
       "default": "chat"
     },
     "session": {
-      "type": "json"
+      "type": "json",
+      "private": true
+    },
+    "config": {
+      "type": "json",
+      "private": true
+    },
+    "iaConfig": {
+      "type": "json",
+      "private": true
     }
   }
 }

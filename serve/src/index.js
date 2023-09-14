@@ -2,7 +2,23 @@
 
 
 
-
+const { BufferMemory, ChatMessageHistory } = require("langchain/memory");
+const { ConversationChain, LLMChain } = require("langchain/chains");
+const { v4: uuidv4 } = require('uuid');
+const { ChatOpenAI } = require("langchain/chat_models/openai");
+const { CallbackManager } = require("langchain/callbacks");
+const Promise = require('bluebird');
+const { OpenAIEmbeddings } = require("langchain/embeddings/openai");
+const path = require('path');
+const { PromptTemplate, OpenAI } = require("langchain");
+const { templates } = require("../util/templates");
+const { summarizeLongDocument } = require("../util/summarizer");
+const SupabaseVectorStoreCustom = require("../util/supabase");
+const clientS = require('../util/superbase-client.js');
+const chat = require("./api/chat/controllers/chat");
+const { OPENAI_API_KEY } = process.env;
+let { URL } = process.env;
+const llm = new OpenAI({});
 module.exports = {
   /**
    * An asynchronous register function that runs before
@@ -25,154 +41,393 @@ module.exports = {
    * run jobs, or perform some special logic.
    */
   bootstrap({ strapi }) {
-   /* process.nextTick(() => {
-   
-      let interval;
-      // @ts-ignore
-      var io = require("socket.io")(strapi.server.httpServer, {
-        cors: { // cors setup
-          origin: "*",
-          methods: ["GET", "POST"],
-          allowedHeaders: ["Authorization"],
-          credentials: true,
-        },
-      });
 
-      console.log('socket.io server started');
-      console.log('socket.io server started',io );
-      io.use(async (socket, next) => {
+    process.nextTick(() => {
+      try {
+        let interval;
+        // @ts-ignore
+        var io = require("socket.io")(strapi.server.httpServer, {
+          cors: { // cors setup
+            origin: "*",
+            methods: ["GET", "POST"],
+            allowedHeaders: ["Authorization"],
+            credentials: true,
+          },
+        });
+
+        io.use(async (socket, next) => {
 
 
-        try {
+          try {
+            const token = socket.handshake.auth.token;
+            const result = await strapi.plugins[
+              'users-permissions'
+            ].services.jwt.verify(token);
 
-    
-          //Socket Authentication
-          const result = await strapi.plugins[
-            'users-permissions'
-          ].services.jwt.verify(socket.handshake.query.token);
+            if (!result) {
 
-          
-          // buscamos el usuario en la base de datos
+              throw new Error('Invalid Token');
 
-          const user = await strapi.entityService.findOne('plugin::users-permissions.user', result.id, {
-            populate: { avatar_image: true }
+            }
+
+            const user = await strapi.entityService.findOne('plugin::users-permissions.user', result.id, {
+              populate: { avatar: true },
+
+              fields: ['id', "name", "username", "lastName", 'uuid'],
+            });
+
+            console.log(`Cliente ${user.username} ${user.name} ${user.lastname} se ha conectado`);
+
+
+            user.avatar = user.avatar ? URL + user.avatar.url : URL + '/uploads/user_147dd8408e.png';
+
+
+
+
+            user["socketId"] = socket.id;
+
+            user["lastConnection"] = new Date().getTime();
+            user["status"] = 'online';
+
+            socket.user = user;
+
+
+            // lo agrego a una sala unica para el usuario llamada user_uuid
+
+
+            socket.join(`user_${user.uuid}`);
+
+
+            next();
+          } catch (error) {
+
+
+            console.log(error)
+
+          }
+
+
+
+        }).on('connection', function (socket) {
+          if (interval) {
+            clearInterval(interval);
+          }
+
+          socket.on('configChat', async (data) => {
+
+            const sessionId = uuidv4();
+            let { language, tone, type, prompt, temperature } = data;
+
+            let promesas = [];
+
+            if (temperature) {
+              // busco en base de datos
+              promesas.push(strapi.db.query('api::temperature.temperature').findOne({
+                where: {
+                  uuid: temperature
+                },
+                select: ['temperature', 'topP'],
+              })
+
+              );
+
+            } else {
+              temperature = {
+                temperature: 0.7,
+                topP: 0.9
+              }
+            }
+
+            if (prompt) {
+
+              // busco en base de datos
+
+              promesas.push(strapi.db.query('api::prompt.prompt').findOne({
+
+                where: {
+
+                  uuid: prompt,
+                  type: 'chat'
+
+                },
+                select: ['content'],
+                populate: ['contextInputs']
+
+
+              }));
+
+            } else {
+              prompt = {
+                content: null
+              }
+            }
+
+
+            if (promesas.length > 0) {
+
+              [temperature, prompt] = await Promise.all(promesas);
+            }
+
+
+            const user = socket.user;
+
+
+            await strapi.db.query('api::chat.chat').create({
+
+              data: {
+
+                // @ts-ignore
+                user: user.id,
+                uuid: sessionId,
+                config: { language, tone, type, prompt, temperature },
+
+              }
+
+            })
+
+
+
+
+            socket.emit('configChatResponse', { uuid: sessionId });
+
+
           });
 
-          delete user.createdAt;
-          delete user.updatedAt;
-          delete user.provider;
-          delete user.password;
-          delete user.resetPasswordToken;
-          delete user.confirmationToken;
+          socket.on('message', async (data) => {
 
-    
-        //  user.avatar_image = user.avatar_image ? user.avatar_image.url : false;
+            let { message, sala, client } = data;
 
-
-          // actualizo el usuario como online
-
-          await strapi.entityService.update('plugin::users-permissions.user', result.id , 
-          
-          {data:{ online: true, socket_id : socket.id  } });
-
-
-          
-          socket.user = user;
-          next();
-        } catch (error) {
-
-
-          console.log(error)
-        }
+            message = message.trim();
 
 
 
-      }).on('connection', function (socket) {
 
 
-        console.log('socket.io server started', socket.user.id);
-
-        if (interval) {
-          clearInterval(interval);
-        }
-
+           
   
-        interval = setInterval(() => {
-          io.emit('serverTime', { time: new Date().getTime() }); // This will emit the event to all connected sockets
-
-        }, 1000);
 
 
+            if (!sala) {
 
- 
-        // send mensaje
+              socket.emit('error', { message: 'Chat no encontrado' });
 
-        socket.on('sendMessage' , async (data) => {
+              return;
 
-          console.log(data);
-          let response = {};
+            }
 
-          let ctx = {
-            request: {
-              body: {
-                data: {
-                  ...data,
-                },
+            if (!message) {
+
+              socket.emit('error', { message: 'Mensaje no encontrado' });
+
+              return;
+
+            }
+
+            const chatModel = await strapi.db.query('api::chat.chat').findOne({
+
+              where: {
+
+                uuid: sala,
+                user: socket.user.id
+
               },
-            },
-            state: {
-              user: socket.user,
-            },
-            // ñado el socket para poder emitir mensajes
-            socket: socket
-          };
+            });
+
+            if (!chatModel) {
+
+              // emito un error
+
+              socket.emit('error', { message: 'Chat no encontrado' });
+              return;
+            }
 
 
-          
-
-        
-
-          if(data.type == 'chat'){
-
-            response = await strapi
-             .service('api::strapi-chat.strapi-chat')
-             .chat(ctx);
-         }else{
-     
-         
-           response = await strapi.service('api::strapi-chat.chat-embading').makeChain(ctx);
-     
-         }
 
 
-          
+            let [relationMessages,pastMessages] = await Promise.all([strapi.services['api::chat.custom-chat'].prepararMemoriaVector(socket.user.id, message, 5, chatModel.id), await strapi.services['api::chat.custom-chat'].prepararMemoria(chatModel, 50)]);
 
-          socket.emit('responseMessage', {status: 'sent' , message: response});
+            console.log(relationMessages)
+
+            console.log(pastMessages)
+
+            const inquiryChain = new LLMChain({
+              llm, prompt: new PromptTemplate({
+                template: templates.inquiryTemplate,
+                inputVariables: ["userPrompt", "conversationHistory"],
+              })
+            });
+           // const inquiryChainResult = await inquiryChain.call({ userPrompt: message, conversationHistory: pastMessages })
+            const inquiry = message
 
 
-          
+            const memory = new BufferMemory({
+              chatHistory: new ChatMessageHistory(pastMessages),
+              //   returnMessages: true, //optional
+              memoryKey: "immediateHistory",
+              inputKey: "input",
+              //  outputKey: "answer", 
+              aiPrefix: "AI: ",
+              humanPrefix: "Human: ",
+
+
+            });
+
+
+
+
+            const matches = await strapi.services['api::chat.custom-chat'].getMatchesFromEmbeddings(socket.user.id, inquiry, 5, client);
+
+
+
+            const source = matches && Array.from(
+              matches.reduce((map, match) => {
+                const metadata = match.metadata || {};
+                console.log(metadata)
+                const { source } = metadata;
+                if (match.type === 'file') {
+                  const url = source.split('uploads')[1];
+                  const normalizedUrl = path.normalize(path.join(URL, 'uploads' + url)).replace(/\\/g, '/');
+                  if (!map.has(normalizedUrl)) {
+                    map.set(normalizedUrl, {
+                      type: 'file',
+                      url: normalizedUrl,
+                      title: match.title,
+                    });
+                  }
+                }
+                return map;
+              }, new Map()).values()
+            );
+            let docs = matches.map((match) => {
+
+              return match.content;
+
+            });
+
+            /*
+              
+            version antigua que maneja sciertos casos de promtps
+            
+            const promptTemplate = new PromptTemplate({
+              template: matches.length>0 ? templates.qaTemplate2 : templates.defaultTemplate,
+              inputVariables:matches.length>0 ? ["summaries", "question", "conversationHistory"] : ["conversationHistory", "question"]
+            });*/
+
+            // le quito los saltos de linea al prompt
+
+            let promtp =chatModel.config.prompt.content.replace(/\n/g, " ");
+
+
+            
+            const promptTemplate = new PromptTemplate({
+              template: promtp,
+              inputVariables: ["context", "input", "immediateHistory", "history", "idioma", "tone"]
+            });
+
+            const model = new ChatOpenAI({
+              openAIApiKey: OPENAI_API_KEY,
+              modelName: "gpt-3.5-turbo" || chatModel.modelName,
+              temperature: 0.7,
+              timeout: 45000,
+              topP: 1,
+              streaming: true,
+              //verbose: true,
+              callbackManager: CallbackManager.fromHandlers({
+                async handleLLMNewToken(token) {
+
+
+                  socket.emit('messageResponse', { message: token });
+
+
+                },
+                async handleLLMEnd(result) {
+
+
+                  socket.emit('messageEnd', { message: result });
+                }
+              }),
+            });
+            const chain = new LLMChain({
+              llm: model,
+              memory: memory,
+              prompt: promptTemplate,
+              verbose: true,
+
+
+            });
+            const allDocs = docs.join("\n")
+
+            // @ts-ignore
+            const summary = allDocs.length > 4000 ? await summarizeLongDocument({ document: allDocs, inquiry: inquiry }) : allDocs
+
+            let response = await chain.call(
+              {
+                history : relationMessages,
+                input: inquiry,
+                context: summary,
+                idioma: chatModel.config.language || 'Español',
+                tone: chatModel.config.tone || 'Formal',
+              },
+
+            )
+            const dbConfig = {
+              client: clientS,
+              tableName: 'messages',
+              query_name: 'match_documents_2',
+            };
+            dbConfig.extraData = {
+              custom: true,
+              type: "message",
+              sender: 'user',
+              chat : sala,
+              content : message,
+              uuid : uuidv4(),
+            }
+   
+              await SupabaseVectorStoreCustom.fromTexts([message], { source: 'user' }, new OpenAIEmbeddings({ openAIApiKey: OPENAI_API_KEY }), dbConfig);
+
+              dbConfig.extraData = {
+                custom: true,
+                type: "message",
+                sender: 'ia',
+                chat : sala,
+                content : response.text,
+                uuid : uuidv4(),
+              }
+
+              await SupabaseVectorStoreCustom.fromTexts([response.text], { source: 'ia' }, new OpenAIEmbeddings({ openAIApiKey: OPENAI_API_KEY }), dbConfig);
+
+            });
+
+
+          socket.on('disconnect', async (socket) => {
+            console.log(`Cliente ${socket.id} se ha desconectado`);
+
+
+          });
+
+
+
+
+
 
         })
 
+        // guardo el socket en el servidor para poder usarlo en los controladores
 
-        socket.on('disconnect', async () => {
-
-
-          // actualizo el usuario como offline
-
-          await strapi.entityService.update('plugin::users-permissions.user', socket.user.id , 
-          
-          {data:{ online: false , socket_id : null }});
+        strapi.io = io;
 
 
-        });
 
 
-        
 
-      });
+      } catch (error) {
+        console.log(error)
+        throw error;
+      }
+    });
 
-    });*/
+
   },
 
 

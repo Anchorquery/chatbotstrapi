@@ -4,13 +4,18 @@
   "info": {
     "singularName": "client",
     "pluralName": "clients",
-    "displayName": "Client"
+    "displayName": "client",
+    "description": ""
   },
   "options": {
     "draftAndPublish": false
   },
   "pluginOptions": {},
   "attributes": {
+    "uuid": {
+      "type": "string",
+      "configurable": false
+    },
     "name": {
       "type": "string"
     },
@@ -23,27 +28,21 @@
       "target": "plugin::users-permissions.user"
     },
     "picture": {
+      "type": "media",
+      "multiple": false,
+      "required": false,
       "allowedTypes": [
         "images"
-      ],
-      "type": "media",
-      "multiple": false
+      ]
     },
     "slug": {
       "type": "uid",
       "targetField": "name"
     },
-    "folder_clients": {
+    "folder": {
       "type": "relation",
-      "relation": "oneToMany",
-      "target": "api::folder-client.folder-client",
-      "mappedBy": "client"
-    },
-    "documents": {
-      "type": "relation",
-      "relation": "oneToMany",
-      "target": "api::document.document",
-      "mappedBy": "client"
+      "relation": "oneToOne",
+      "target": "api::document-file.document-file"
     }
   }
 }

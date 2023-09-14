@@ -1,0 +1,37 @@
+{
+  "collectionName": "components_campos_prompts_input_extras",
+  "info": {
+    "displayName": "inputExtra",
+    "icon": "file",
+    "description": ""
+  },
+  "options": {},
+  "attributes": {
+    "title": {
+      "type": "string"
+    },
+    "inputType": {
+      "type": "enumeration",
+      "enum": [
+        "datetime",
+        "text",
+        "textarea"
+      ],
+      "default": "text"
+    },
+    "content": {
+      "type": "text"
+    },
+    "placeholder": {
+      "type": "string"
+    },
+    "inputMaximumCharacters": {
+      "type": "integer",
+      "default": 300
+    },
+    "isRequired": {
+      "type": "boolean",
+      "default": true
+    }
+  }
+}

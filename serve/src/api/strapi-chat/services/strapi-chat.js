@@ -62,7 +62,7 @@ async function generateSession(apiKey , config = {} ) {
 
   const initialPrompt = await initializedPrompt.format({  language: language });
   const langChain = configureLangChainChat(apiKey, config)
-  await sessionManager.saveSession(sessionId, langChain.chain, initialPrompt)
+  await sessionManager.saveSession(sessionId, langChain.chain, initialPrompt);
   return sessionId;
 }
 

@@ -1,0 +1,27 @@
+{
+  "kind": "collectionType",
+  "collectionName": "prompts_categories",
+  "info": {
+    "singularName": "prompts-category",
+    "pluralName": "prompts-categories",
+    "displayName": "Prompts Category",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+
+    "uuid": {
+      "type": "string",
+      "configurable": false
+    },
+    "title": {
+      "type": "string"
+    },
+    "description": {
+      "type": "text"
+    }
+  }
+}

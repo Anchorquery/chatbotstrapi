@@ -1,0 +1,76 @@
+{
+  "kind": "collectionType",
+  "collectionName": "document_files",
+  "info": {
+    "singularName": "document-file",
+    "pluralName": "document-files",
+    "displayName": "Folders & files",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "uuid": {
+      "type": "string",
+      "configurable": false
+    },
+
+    "title": {
+      "type": "string"
+    },
+    "content": {
+      "type": "customField",
+      "options": {
+        "output": "HTML",
+        "preset": "rich"
+      },
+      "customField": "plugin::ckeditor.CKEditor"
+    },
+    "create": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "client": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::client.client"
+    },
+    "document_embading": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::document.document"
+    },
+    "chat": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::chat.chat"
+    },
+    "parent": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::document-file.document-file"
+    },
+    "description": {
+      "type": "text"
+    },
+    "typeFolder": {
+      "type": "enumeration",
+      "enum": [
+        "not_folder",
+        "default",
+        "client"
+      ],
+      "default": "not_folder"
+    },
+    "isFolder": {
+      "type": "boolean",
+      "default": false
+    },
+    "words": {
+      "type": "biginteger"
+    }
+  }
+}

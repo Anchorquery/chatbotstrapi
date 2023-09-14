@@ -1,6 +1,6 @@
+const { CheerioWebBaseLoader } =require ("langchain/document_loaders/web/cheerio");
 const { PuppeteerWebBaseLoader } = require("langchain/document_loaders/web/puppeteer");
 const { RecursiveCharacterTextSplitter } = require('langchain/text_splitter');
-const { CheerioWebBaseLoader } =require ("langchain/document_loaders/web/cheerio");
 
 
 

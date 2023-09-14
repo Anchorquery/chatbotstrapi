@@ -1,0 +1,78 @@
+{
+  "kind": "collectionType",
+  "collectionName": "prompts",
+  "info": {
+    "singularName": "prompt",
+    "pluralName": "prompts",
+    "displayName": "Prompts",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+
+    "uuid": {
+      "type": "string",
+      "configurable": false
+    },
+    "status": {
+      "type": "boolean",
+      "default": true
+    },
+    "private": {
+      "type": "boolean",
+      "default": false
+    },
+    "creator": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "colorIcon": {
+      "type": "customField",
+      "regex": "^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$",
+      "customField": "plugin::color-picker.color"
+    },
+    "oficial": {
+      "type": "boolean",
+      "default": true,
+      "private": true
+    },
+    "title": {
+      "type": "string",
+      "required": true
+    },
+    "content": {
+      "type": "customField",
+      "options": {
+        "output": "Markdown",
+        "preset": "rich"
+      },
+      "customField": "plugin::ckeditor.CKEditor"
+    },
+    "metaData": {
+      "type": "json"
+    },
+    "category": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::prompts-category.prompts-category"
+    },
+    "type": {
+      "type": "enumeration",
+      "enum": [
+        "chat",
+        "copy"
+      ],
+      "default": "copy"
+    },
+    "contextInputs": {
+      "displayName": "inputExtra",
+      "type": "component",
+      "repeatable": true,
+      "component": "campos-prompts.input-extra"
+    }
+  }
+}

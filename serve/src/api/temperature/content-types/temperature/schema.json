@@ -1,0 +1,33 @@
+{
+  "kind": "collectionType",
+  "collectionName": "temperatures",
+  "info": {
+    "singularName": "temperature",
+    "pluralName": "temperatures",
+    "displayName": "Temperature",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "title": {
+      "type": "string"
+    },
+    "description": {
+      "type": "text"
+    },
+    "temperature": {
+      "type": "decimal"
+    },
+    "topP": {
+      "type": "decimal"
+    },
+
+    "uuid": {
+      "type": "string",
+      "configurable": false
+    }
+  }
+}

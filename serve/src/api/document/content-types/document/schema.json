@@ -1,0 +1,78 @@
+{
+  "kind": "collectionType",
+  "collectionName": "documents",
+  "info": {
+    "singularName": "document",
+    "pluralName": "documents",
+    "displayName": "document embading",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "uuid": {
+      "type": "string",
+      "configurable": false
+    },
+    "metadata": {
+      "type": "json"
+    },
+    "embeddingRaw": {
+      "type": "json",
+      "private": true
+    },
+    "embedding": {
+      "type": "vector"
+    },
+    "media": {
+      "type": "media",
+      "multiple": false,
+      "required": false,
+      "allowedTypes": [
+        "images",
+        "files"
+      ]
+    },
+    "title": {
+      "type": "string"
+    },
+    "description": {
+      "type": "text"
+    },
+    "url": {
+      "type": "string",
+      "unique": false
+    },
+    "type": {
+      "type": "enumeration",
+      "enum": [
+        "file",
+        "url",
+        "sitemap",
+        "folder"
+      ]
+    },
+    "state": {
+      "type": "boolean"
+    },
+    "content": {
+      "type": "customField",
+      "options": {
+        "output": "Markdown",
+        "preset": "rich"
+      },
+      "customField": "plugin::ckeditor.CKEditor"
+    },
+    "client": {
+      "type": "integer"
+    },
+    "creator": {
+      "type": "integer"
+    },
+    "grupoIncrustacion": {
+      "type": "integer"
+    }
+  }
+}

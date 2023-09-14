@@ -1,0 +1,82 @@
+{
+  "kind": "collectionType",
+  "collectionName": "grupo_de_incrustaciones",
+  "info": {
+    "singularName": "grupo-de-incrustacion",
+    "pluralName": "grupo-de-incrustaciones",
+    "displayName": "Grupo de incrustacion",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "uuid": {
+      "type": "string",
+      "configurable": false
+    },
+    "create": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "client": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::client.client"
+    },
+    "title": {
+      "type": "string"
+    },
+    "media": {
+      "type": "media",
+      "multiple": false,
+      "required": false,
+      "allowedTypes": [
+        "images",
+        "files",
+        "videos",
+        "audios"
+      ]
+    },
+    "slug": {
+      "type": "uid",
+      "targetField": "title"
+    },
+    "type": {
+      "type": "enumeration",
+      "enum": [
+        "file",
+        "url"
+      ],
+      "default": "file"
+    },
+    "isSiteMap": {
+      "type": "boolean",
+      "default": false
+    },
+    "urlSiteMap": {
+      "type": "string"
+    },
+    "queueState": {
+      "type": "enumeration",
+      "enum": [
+        "waiting",
+        "active",
+        "completed",
+        "failed",
+        "error",
+        "removed"
+      ],
+      "default": "waiting"
+    },
+    "idQueue": {
+      "type": "biginteger"
+    },
+    "isQueue": {
+      "type": "boolean",
+      "default": false
+    }
+  }
+}

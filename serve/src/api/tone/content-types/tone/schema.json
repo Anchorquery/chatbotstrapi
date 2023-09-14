@@ -1,0 +1,22 @@
+{
+  "kind": "collectionType",
+  "collectionName": "tones",
+  "info": {
+    "singularName": "tone",
+    "pluralName": "tones",
+    "displayName": "tone"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "title": {
+      "type": "string"
+    },
+    "uuid": {
+      "type": "string",
+      "configurable": false
+    }
+  }
+}

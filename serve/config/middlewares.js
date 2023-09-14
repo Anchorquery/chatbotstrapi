@@ -5,7 +5,16 @@ module.exports = [
   'strapi::poweredBy',
   'strapi::logger',
   'strapi::query',
-  'strapi::body',
+  {
+    name: 'strapi::body',
+    config: {
+      patchKoa: true,
+      multipart: true,
+      includeUnparsed: true,
+      parseLimit: '5mb',
+      jsonLimit	: '250mb',
+    },
+  },
   'strapi::session',
   'strapi::favicon',
   'strapi::public',
