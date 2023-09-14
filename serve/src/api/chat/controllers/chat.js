@@ -357,8 +357,17 @@ module.exports = createCoreController('api::chat.chat', ({ strapi }) => ({
 				chat: chatModel.id
 
 			},
+			
 
 		});
+
+		 for (let i = 0; i < messages.length; i++) {
+
+			 delete	messages[i].embedding;
+
+		 }
+
+
 
 		
 
