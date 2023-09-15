@@ -115,3 +115,5 @@ build
 .strapi-updater.json
 docs
 server/frontend
+frontend/
+test/
