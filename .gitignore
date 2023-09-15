@@ -1,6 +1,5 @@
-serve/node_modules
-serve/test
-serve/frontend
+node_modules
+test
 frontend/*
 app/node_modules
 serve/.pnp
@@ -14,7 +13,7 @@ serve/coverage
 /out/
 
 # production
-serve/build
+build/
 
 # misc
 .DS_Store
@@ -34,7 +33,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-frontend
-serve/frontend
-serve/package-lock.json
-serve/python
+frontend/*
+package-lock.json
+python/*
+.cache/
