@@ -1,40 +1,117 @@
-serve/node_modules
-serve/test
-serve/frontend
-frontend/*
-app/node_modules
-serve/.pnp
-.pnp.js
+############################
+# OS X
+############################
 
-# testing
-serve/coverage
-
-# next.js
-/.next/
-/out/
-
-# production
-serve/build
-
-# misc
 .DS_Store
-*.pem
+.AppleDouble
+.LSOverride
+Icon
+.Spotlight-V100
+.Trashes
+._*
 
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
 
-# local env files
-//.env
+############################
+# Linux
+############################
 
-# vercel
-.vercel
+*~
 
-# typescript
-*.tsbuildinfo
-next-env.d.ts
-frontend
-serve/frontend
-serve/package-lock.json
-serve/python
+
+############################
+# Windows
+############################
+
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msm
+*.msp
+
+
+############################
+# Packages
+############################
+
+*.7z
+*.csv
+*.dat
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+*.com
+*.class
+*.dll
+*.exe
+*.o
+*.seed
+*.so
+*.swo
+*.swp
+*.swn
+*.swm
+*.out
+*.pid
+
+
+############################
+# Logs and databases
+############################
+
+.tmp
+*.log
+*.sql
+*.sqlite
+*.sqlite3
+
+
+############################
+# Misc.
+############################
+
+*#
+ssl
+.idea
+nbproject
+public/uploads/*
+!public/uploads/.gitkeep
+
+############################
+# Node.js
+############################
+
+lib-cov
+lcov.info
+pids
+logs
+results
+node_modules
+.node_history
+
+############################
+# Tests
+############################
+
+testApp
+coverage
+
+############################
+# Strapi
+############################
+
+.env
+license.txt
+exports
+*.cache
+dist
+build
+.strapi-updater.json
+docs
+server/frontend
