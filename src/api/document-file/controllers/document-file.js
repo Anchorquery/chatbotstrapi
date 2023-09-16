@@ -68,8 +68,6 @@ module.exports = createCoreController('api::document-file.document-file', ({ str
 
 	async update(ctx) {
 
-		console.log("EDITANDOOOOOOOOOOOOOOOO");
-
 		const { user } = ctx.state;
 
 		if (!user) return ctx.unauthorized("Unauthorized");

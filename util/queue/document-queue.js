@@ -184,7 +184,7 @@ module.exports = class DocumentSitemapQueue {
 				client: clienteEmpresa.id,
 				type: "url",
 				creator: user.id,
-				title: nombreFile,
+				title: nombreFile ? nombreFile : urls.length == 1	? urls[0] : 'Varios documentos',
 				grupoIncrustacion: grupoIncrustacion.id,
 
 			}
