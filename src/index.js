@@ -242,21 +242,22 @@ module.exports = {
             }
 
 
+            // emito un mensaje indicando que se buscan mensajes anteriores
 
+            socket.emit('info', { message: 'Buscando mensajes en memoria' });
 
             let [relationMessages,pastMessages] = await Promise.all([strapi.services['api::chat.custom-chat'].prepararMemoriaVector(socket.user.id, message, 5, chatModel.id), await strapi.services['api::chat.custom-chat'].prepararMemoria(chatModel, 50)]);
 
-            console.log(relationMessages)
 
-            console.log(pastMessages)
 
-            const inquiryChain = new LLMChain({
+
+           /* const inquiryChain = new LLMChain({
               llm, prompt: new PromptTemplate({
                 template: templates.inquiryTemplate,
                 inputVariables: ["userPrompt", "conversationHistory"],
               })
             });
-           // const inquiryChainResult = await inquiryChain.call({ userPrompt: message, conversationHistory: pastMessages })
+           const inquiryChainResult = await inquiryChain.call({ userPrompt: message, conversationHistory: pastMessages })*/
             const inquiry = message
 
 
@@ -272,10 +273,26 @@ module.exports = {
 
             });
 
+            // memoria preparada mando mensaje de que se ha encontrado
+
+            socket.emit('info', { message: 'Memoria preparada' });
+
+
+
+       
+
+
+            // emito mensaje de que se estan buscando documentos relacionados
+
+            socket.emit('info', { message: 'Buscando documentos relacionados con la consulta' });
 
 
 
             const matches = await strapi.services['api::chat.custom-chat'].getMatchesFromEmbeddings(socket.user.id, inquiry, 5, client);
+
+            // emito mensaje de que se han encontrado documentos relacionados
+
+            socket.emit('info', { message: `Se encontraron ${matches.length} documentos relacionados ` });
 
 
 
@@ -323,6 +340,13 @@ module.exports = {
               template: promtp,
               inputVariables: ["context", "input", "immediateHistory", "history", "idioma", "tone"]
             });
+
+
+            // mando mensaje de preparando modelo
+
+            socket.emit('info', { message: 'Preparando modelo' });
+
+            
 
             const model = new ChatOpenAI({
               openAIApiKey: OPENAI_API_KEY,

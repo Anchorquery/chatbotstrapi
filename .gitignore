@@ -117,3 +117,5 @@ docs
 server/frontend
 frontend/
 test/
+package-lock.json
+yarn.lock

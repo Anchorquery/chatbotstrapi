@@ -17,6 +17,7 @@
     "@pinecone-database/pinecone": "^0.1.6",
     "@strapi/plugin-color-picker": "^4.13.6",
     "@strapi/plugin-i18n": "4.13.6",
+    "@strapi/plugin-sentry": "^4.13.6",
     "@strapi/plugin-users-permissions": "4.13.6",
     "@strapi/strapi": "4.13.6",
     "@supabase/supabase-js": "^2.26.0",

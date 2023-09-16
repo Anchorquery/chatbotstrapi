@@ -319,7 +319,6 @@ module.exports = createCoreService('api::chat.chat', ({ strapi }) => ({
 
  }
 
-  // recorro los mensajes y los agrego a la memoria identificando si es un mensaje del usuario o del bot por el campo type
 
   mensajes.forEach(mensaje => {
 
@@ -365,6 +364,8 @@ async prepararMemoriaVector(idUser, message, match_count, sala ) {
       match_count:match_count, 
       sala : sala ? sala : null,
     });
+
+    strapi.io.in(`user_${sala}`).emit('info', { message: `Se encontraron ${data.length} mensajes relacionados a la consulta.` });
 
 
     return data
