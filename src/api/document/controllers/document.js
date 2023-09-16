@@ -73,11 +73,6 @@ module.exports = createCoreController('api::document.document', ({ strapi }) => 
 			let nombreFile = file.name.split('.')[0];
 
 
-			const slug = slugify(nombreFile, {
-				replacement: '-', // Carácter que reemplaza los espacios
-				lower: true,     // Convierte todo a minúsculas
-				remove: /[*+~.()'"!:@]/g, // Elimina caracteres especiales
-			});
 
 			// elimino caracteres especiales , _ y - del nombre
 
@@ -92,7 +87,6 @@ module.exports = createCoreController('api::document.document', ({ strapi }) => 
 					where: {
 						client: clienteEmpresa.id,
 						title: nombreFile,
-						slug: slug,
 						create: user.id
 					},
 					select: ['id']
@@ -111,7 +105,6 @@ module.exports = createCoreController('api::document.document', ({ strapi }) => 
 							title: nombreFile,
 							client: clienteEmpresa.id,
 							create: user.id,
-							slug: slug
 						}
 
 					}
@@ -267,13 +260,6 @@ module.exports = createCoreController('api::document.document', ({ strapi }) => 
 			let nombreFile = file ? file.name.split('.')[0] : url.split('/').pop().split('#')[0].split('?')[0];
 
 
-			const slug = slugify(nombreFile, {
-				replacement: '-', // Carácter que reemplaza los espacios
-				lower: true,     // Convierte todo a minúsculas
-				remove: /[*+~.()'"!:@]/g, // Elimina caracteres especiales
-			});
-
-
 			nombreFile = nombreFile.trim().replace(/[*+~.()'"!:@]/g, '').replace(/[_-]/g, ' ');
 			let fileNameNoExt = uuid() + '_' + nombreFile;
 
@@ -285,7 +271,6 @@ module.exports = createCoreController('api::document.document', ({ strapi }) => 
 					where: {
 						client: clienteEmpresa.id,
 						title: nombreFile,
-						slug: slug,
 						create: user.id
 					},
 					select: ['id']
@@ -304,7 +289,6 @@ module.exports = createCoreController('api::document.document', ({ strapi }) => 
 							title: nombreFile,
 							client: clienteEmpresa.id,
 							create: user.id,
-							slug: slug
 						}
 
 					}
@@ -478,25 +462,25 @@ module.exports = createCoreController('api::document.document', ({ strapi }) => 
 
 
 			let loader = null;
-			if (format == '.txt') {
+			if (format == '.txt' || format == '.TXT') {
 
 				loader = new TextLoader(
 					absolutePath
 				);
 
-			} else if (format == '.csv') {
+			} else if (format == '.csv'  || format == '.CSV') {
 
 				loader = new CSVLoader(
 					absolutePath
 				);
 
-			} else if (format == '.pdf') {
+			} else if (format == '.pdf' || format == '.PDF') {
 
 				loader = new PDFLoader(
 					absolutePath
 				);
 
-			} else if (format == '.docx') {
+			} else if (format == '.docx' || format == '.DOCX') {
 
 				loader = new DocxLoader(
 

@@ -40,10 +40,6 @@
         "audios"
       ]
     },
-    "slug": {
-      "type": "uid",
-      "targetField": "title"
-    },
     "type": {
       "type": "enumeration",
       "enum": [
