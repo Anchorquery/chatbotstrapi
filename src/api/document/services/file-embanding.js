@@ -2,7 +2,7 @@
 
 /**
 	* strapi-chat service
-	*/
+	*/ 
 
 const { OpenAIEmbeddings } = require('langchain/embeddings/openai');
 const { DirectoryLoader } = require('langchain/document_loaders/fs/directory');
