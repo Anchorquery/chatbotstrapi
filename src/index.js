@@ -76,7 +76,6 @@ module.exports = {
               fields: ['id', "name", "username", "lastName", 'uuid'],
             });
 
-            console.log(`Cliente ${user.username} ${user.name} ${user.lastname} se ha conectado`);
 
 
             user.avatar = user.avatar ? URL + user.avatar.url : URL + '/uploads/user_147dd8408e.png';
@@ -246,7 +245,7 @@ module.exports = {
 
             socket.emit('info', { message: 'Buscando mensajes en memoria' });
 
-            let [relationMessages,pastMessages] = await Promise.all([strapi.services['api::chat.custom-chat'].prepararMemoriaVector(socket.user.id, message, 5, chatModel.id), await strapi.services['api::chat.custom-chat'].prepararMemoria(chatModel, 50)]);
+            let [relationMessages,pastMessages] = await Promise.all([strapi.services['api::chat.custom-chat'].prepararMemoriaVector(socket.user.id, message, 5, chatModel.id), await strapi.services['api::chat.custom-chat'].prepararMemoria(message,chatModel, 1)]);
 
 
 
@@ -288,7 +287,7 @@ module.exports = {
 
 
 
-            const matches = await strapi.services['api::chat.custom-chat'].getMatchesFromEmbeddings(socket.user.id, inquiry, 5, client);
+            const matches = await strapi.services['api::chat.custom-chat'].getMatchesFromEmbeddings(socket.user.id, inquiry, 10, client);
 
             // emito mensaje de que se han encontrado documentos relacionados
 
@@ -296,7 +295,7 @@ module.exports = {
 
 
 
-            const source = matches && Array.from(
+           /* const source = matches && Array.from(
               matches.reduce((map, match) => {
                 const metadata = match.metadata || {};
                 console.log(metadata)
@@ -314,7 +313,48 @@ module.exports = {
                 }
                 return map;
               }, new Map()).values()
+            );*/
+
+            const source = matches && Array.from(
+              matches.reduce((map, match) => {
+                const metadata = match.metadata || {};
+                const { source } = metadata;
+                let url = null;
+                let normalizedUrl = null;
+                if (match.type === 'file') {
+                   url = source.split('uploads')[1];
+                   normalizedUrl = path.normalize(path.join(URL, 'uploads' + url)).replace(/\\/g, '/');
+                }else{
+                   normalizedUrl = match.url;
+                   url = match.url;
+
+                }
+                  metadata.text = match.content;
+                  if (!map.has(normalizedUrl)) {
+                    map.set(normalizedUrl, {
+                      type: match.type,
+                      url: normalizedUrl,
+                      titles: [match.title], 
+                      metadata: [metadata],
+                      text : match.content,
+                    });
+                  } else {
+                    // agrego el titulo si no existe en el arreglo
+
+                    if(!map.get(normalizedUrl).titles.includes(match.title)){
+                        
+                        map.get(normalizedUrl).titles.push(match.title);
+                
+                    }
+                    
+
+                    map.get(normalizedUrl).metadata.push(metadata);
+                  }
+                
+                return map;
+              }, new Map()).values()
             );
+            
             let docs = matches.map((match) => {
 
               return match.content;
@@ -332,7 +372,36 @@ module.exports = {
 
             // le quito los saltos de linea al prompt
 
-            let promtp =chatModel.config.prompt.content.replace(/\n/g, " ");
+            let promtp = null;
+
+            if(chatModel.config.prompt.id){
+
+              promtp = await strapi.db.query('api::prompt.prompt').findOne({
+
+                where: {
+
+                  id: chatModel.config.prompt.id,
+                  type: 'chat'
+
+                },
+                select: ['content'],
+                populate: ['contextInputs']
+
+              });
+
+
+              promtp = promtp.content.replace(/\\n/g, ' ').replace(/\\-/g, '-');
+              
+              
+
+            }
+
+            if(!promtp){
+
+              promtp = chatModel.config.prompt.content.replace(/\n/g, " ");
+            }
+
+
 
 
             
@@ -350,7 +419,7 @@ module.exports = {
 
             const model = new ChatOpenAI({
               openAIApiKey: OPENAI_API_KEY,
-              modelName: "gpt-3.5-turbo" || chatModel.modelName,
+              modelName: process.env.MODEL_CHAT_DEFAULT || chatModel.modelName,
               temperature: 0.7,
               timeout: 45000,
               topP: 1,
@@ -367,7 +436,11 @@ module.exports = {
                 async handleLLMEnd(result) {
 
 
-                  socket.emit('messageEnd', { message: result });
+                  socket.emit('messageEnd', { message: result , source : source, uuid : uuidv4() });
+
+                  // si hay source mando el source
+
+                  
                 }
               }),
             });
@@ -381,9 +454,10 @@ module.exports = {
             });
             const allDocs = docs.join("\n")
 
+            socket.emit('info', { message: 'Formateando información' });
             // @ts-ignore
-            const summary = allDocs.length > 4000 ? await summarizeLongDocument({ document: allDocs, inquiry: inquiry }) : allDocs
-
+            const summary = allDocs.length > process.env.LIMIT_DOCUMENT_CHARACTERS_MATH ? await summarizeLongDocument({ document: allDocs, inquiry: inquiry }) : allDocs
+            socket.emit('info', { message: 'Iniciando respuesta.' });
             let response = await chain.call(
               {
                 history : relationMessages,
@@ -408,7 +482,7 @@ module.exports = {
               uuid : uuidv4(),
             }
    
-              await SupabaseVectorStoreCustom.fromTexts([message], { source: 'user' }, new OpenAIEmbeddings({ openAIApiKey: OPENAI_API_KEY }), dbConfig);
+              SupabaseVectorStoreCustom.fromTexts([message], { source: 'user' }, new OpenAIEmbeddings({ openAIApiKey: OPENAI_API_KEY }), dbConfig);
 
               dbConfig.extraData = {
                 custom: true,
@@ -417,6 +491,7 @@ module.exports = {
                 chat : sala,
                 content : response.text,
                 uuid : uuidv4(),
+                metadata : source,
               }
 
               await SupabaseVectorStoreCustom.fromTexts([response.text], { source: 'ia' }, new OpenAIEmbeddings({ openAIApiKey: OPENAI_API_KEY }), dbConfig);

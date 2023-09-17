@@ -404,11 +404,11 @@ module.exports = createCoreController('api::document.document', ({ strapi }) => 
 
 			const docs = await loader.loadAndSplit(textSplitter);
 
-			let chuckHeader = `DOCUMENT NAME: ${nombre} \n \n`;
+			let chuckHeader = `DOCUMENT NAME: ${nombre} . \n \n`;
 
 			if (nameClient) {
 
-				chuckHeader += `PROPERTY: ${nameClient} \n \n`;
+				chuckHeader += `PROPERTY DOCUMENT: ${nameClient}.  \n \n`;
 
 			}
 
@@ -497,9 +497,9 @@ module.exports = createCoreController('api::document.document', ({ strapi }) => 
 			}
 			let docs = await loader.loadAndSplit(textSplitter);
 
-			let chuckHeader = `DOCUMENT NAME: ${nombre} \n \n`;
+			let chuckHeader = `DOCUMENT NAME: ${nombre} . \n \n`;
 			if (nameClient) {
-				chuckHeader += `PROPERTY: ${nameClient} \n \n`;
+				chuckHeader += `PROPERTY DOCUMENT: ${nameClient}.  \n \n`;
 			}
 
 

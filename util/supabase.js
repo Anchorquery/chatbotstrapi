@@ -1,6 +1,6 @@
 const { VectorStore } = require("langchain/vectorstores");
 const { Document } = require("langchain/document");
-const { promise } = require("zod");
+const { v4: uuid } = require("uuid");
 /**
  * Class for interacting with a Supabase database to store and manage
  * vectors.
@@ -80,11 +80,13 @@ module.exports = class SupabaseVectorStoreCustom extends VectorStore {
                 var rows = vectors.map((embedding, idx) => ({
                     content: documents[idx].pageContent,
                     embedding,
-                    uuid : options.uuid,
+                    uuid : options.uuid ? options.uuid: uuid(),
                     datetime : new Date(),
                     sender : options.sender,
                     chat: options.chat,
                     type: 'text',
+                    metadata : options.metadata,
+                   
 
                 }));
 
@@ -96,6 +98,7 @@ module.exports = class SupabaseVectorStoreCustom extends VectorStore {
                 metadata: documents[idx].metadata,
                 created_at: new Date(),
                 updated_at: new Date(),
+                uuid : options.uuid ? options.uuid: uuid(),
                 type: options.type,
                 state: true,
                 url : documents[idx].metadata.url ? documents[idx].metadata.url : options.url ,
@@ -116,6 +119,7 @@ module.exports = class SupabaseVectorStoreCustom extends VectorStore {
                 created_at: new Date(),
                 updated_at: new Date(),
                 state: true,
+                uuid : options.uuid ? options.uuid : uuid(),
             }));
         }
 
@@ -142,6 +146,7 @@ module.exports = class SupabaseVectorStoreCustom extends VectorStore {
                     datetime : chunk[0].datetime,
                     sender : chunk[0].sender,
                     type: chunk[0].type,
+                    metadata : chunk[0].metadata,
 
                 }).select();
 

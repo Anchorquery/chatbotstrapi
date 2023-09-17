@@ -6,6 +6,7 @@
 
 const sessionManager = require("../sessionManager");
 const { OpenAI } = require("langchain/llms/openai");
+// @ts-ignore
 const { BufferMemory, ChatMessageHistory,VectorStoreRetrieverMemory } = require("langchain/memory");
 const { ConversationChain } = require("langchain/chains");
 const { PromptTemplate } = require("langchain/prompts");
@@ -20,8 +21,10 @@ const { OPENAI_API_KEY } = process.env;
 
 const clientS = require('../../../../util/superbase-client.js');
 
+// @ts-ignore
 const { SupabaseVectorStore } = require('langchain/vectorstores/supabase');
-
+const { summarizeLongDocument } = require("../../../../util/summarizer");
+const { Promise } = require("bluebird");
 
 
 function configureLangChainChat(config = {}) {
@@ -51,6 +54,7 @@ function configureLangChainChat(config = {}) {
   }
 }
 
+// @ts-ignore
 async function generateSession(apiKey, config = {}) {
 
   const sessionId = uuidv4();
@@ -126,6 +130,7 @@ module.exports = createCoreService('api::chat.chat', ({ strapi }) => ({
 
     // genero la memoria 
 
+    // @ts-ignore
     const pastMessages = await this.prepararMemoria(chat, 5);
 
   /*  const memory = new BufferMemory({
@@ -170,12 +175,14 @@ module.exports = createCoreService('api::chat.chat', ({ strapi }) => ({
   
     const language = config.language || "English";
 
+   // @ts-ignore
    const  inputVariables = prompt.contextInputs;
    const template = prompt.content;
   
 
   
     const promptTemplate = new PromptTemplate({ template, inputVariables: [] });  
+    // @ts-ignore
     const initialPrompt = await promptTemplate.format({ language: language });
 
 
@@ -204,6 +211,7 @@ module.exports = createCoreService('api::chat.chat', ({ strapi }) => ({
     const user = ctx.state.user;
     let { tone, sessionId, language, message } = ctx.request.body.data;
 
+    // @ts-ignore
     let socket = ctx.socket;
 
 
@@ -277,17 +285,19 @@ module.exports = createCoreService('api::chat.chat', ({ strapi }) => ({
     return { message: "Session deleted" };
   },
 
+  // @ts-ignore
   async clearAllSessions(ctx) {
     await sessionManager.clearAllSessions();
     return { message: "Sessions cleared" };
   },
 
+  // @ts-ignore
   async getAllSessions(ctx) {
     const sessions = await sessionManager.showAllSessions();
     return sessions;
   },
 
- async prepararMemoria(chat, limit, user = 'User' ) {
+ async prepararMemoria(inquiry,chat, limit, user = 'User' ) {
 
   if (!chat) return;
 
@@ -309,7 +319,7 @@ module.exports = createCoreService('api::chat.chat', ({ strapi }) => ({
 
 
 
-  if (chat.config && chat.config.content) {
+ /* if (chat.config && chat.config.content) {
 
     memoria.push(new AIMessage({
       content: chat.config.content,
@@ -317,35 +327,45 @@ module.exports = createCoreService('api::chat.chat', ({ strapi }) => ({
 
     }));
 
- }
+ }*/
 
 
-  mensajes.forEach(mensaje => {
-
-    if (mensaje.sender== 'ia') {
-
-      memoria.push(new AIMessage({
-        content: mensaje.content.trim(),
-        name: "IA BOT",
-
-      }));
-
-    } else {
-
-      memoria.push(new HumanMessage({
-        content: mensaje.content.trim(),
-        name: user,
-
-      }));
-
+ // @ts-ignore
+ await Promise.map(mensajes, async (mensaje) => {
+  try {
+    if (mensaje.content.length > process.env.LIMIT_DOCUMENT_CHARACTERS_MATH) {
+      
+      // @ts-ignore
+      mensaje.content = await summarizeLongDocument({ document: mensaje.content, inquiry: inquiry });
     }
 
-  });
+    if (mensaje.sender == 'ia') {
+      memoria.push(
+        new AIMessage({
+          content: mensaje.content.trim(),
+          name: 'IA BOT',
+        })
+      );
+    } else {
+      memoria.push(
+        new HumanMessage({
+          content: mensaje.content.trim(),
+          name: user,
+        })
+      );
+    }
+  } catch (error) {
+    // Maneja los errores aquí
+    console.error('Error:', error);
+  }
+});
+
 
 
   return memoria;
 
 },
+// @ts-ignore
 async prepararMemoriaVector(idUser, message, match_count, sala ) {
 
   try {
@@ -374,7 +394,6 @@ async prepararMemoriaVector(idUser, message, match_count, sala ) {
     .trim()
     .replaceAll('\n', ' ');
 
-    return data;
 
     
   } catch (error) {
@@ -385,6 +404,7 @@ async prepararMemoriaVector(idUser, message, match_count, sala ) {
 
 },
 
+// @ts-ignore
 async getMatchesFromEmbeddings ( creator, message, match_count,client = null,grupo_incrustacion = null) {
 
   try {

@@ -11,15 +11,15 @@ const Promise	= require('bluebird');
 const { RecursiveCharacterTextSplitter } = require('langchain/text_splitter');
 const path = require('path');
 const fs = Promise.promisifyAll(require('fs'));
-const chunkSize = 5000;
-const chunkOverlap = 500;
+const chunkSize = 1000;
+const chunkOverlap = 200;
 const textSplitter = new RecursiveCharacterTextSplitter({
 	chunkSize: chunkSize,
 	chunkOverlap: chunkOverlap,
 });
 const embading = new OpenAIEmbeddings({
 		openAIApiKey: process.env.OPENAI_API_KEY,
-		batchSize: 300,
+		//batchSize: 300,
 		modelName: 'text-embedding-ada-002',
 
 	}
@@ -303,11 +303,11 @@ module.exports = class DocumentSitemapQueue {
 				}
 
 
-				let chuckHeader = `DOCUMENT NAME: ${row.title} \n \n`;
+				let chuckHeader = `DOCUMENT NAME: ${row.title} . \n \n`;
 
 				if (nameClient) {
 	
-					chuckHeader += `PROPERTY: ${nameClient} \n \n`;
+					chuckHeader += `PROPERTY DOCUMENT: ${nameClient} .\n \n`;
 	
 				}
 

@@ -7,7 +7,7 @@ const { StructuredOutputParser } = require("langchain/output_parsers");
 const llm = new OpenAI({ concurrency: 10, temperature: 0, modelName: "gpt-3.5-turbo" });
 
 
-let limitCharacteerLength = 4000;
+let limitCharacteerLength = 8000;
 
 const { summarizerTemplate, summarizerDocumentTemplate } = templates;
 
@@ -16,7 +16,7 @@ const parser = StructuredOutputParser.fromNamesAndDescriptions({
   source: "source used to answer the user's question, should be a website.",
 });
 
-const formatInstructions = parser.getFormatInstructions();
+//const formatInstructions = parser.getFormatInstructions();
 
 const limiter = new Bottleneck({
   minTime: 5050
@@ -25,7 +25,6 @@ const limiter = new Bottleneck({
 
 const chunkSubstr = (str, size) => {
   const numChunks = Math.ceil(str.length / size);
-  console.log("numChunks", numChunks);
   const chunks = new Array(numChunks);
 
   for (let i = 0, o = 0; i < numChunks; ++i, o += size) {

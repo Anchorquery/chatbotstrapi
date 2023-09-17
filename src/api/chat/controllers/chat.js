@@ -9,7 +9,8 @@ const { ConversationChain } = require("langchain/chains");
 const { PromptTemplate } = require("langchain/prompts");
 const { v4: uuidv4 } = require('uuid');
 const { createCoreController } = require('@strapi/strapi').factories;
-
+const { convert } = require('html-to-text');
+const { Promise	} = require('bluebird');
 const  { OPENAI_API_KEY } = process.env;
 
 module.exports = createCoreController('api::chat.chat', ({ strapi }) => ({
@@ -85,6 +86,10 @@ module.exports = createCoreController('api::chat.chat', ({ strapi }) => ({
 
 			if (messages[0].content.length > 100) {
 
+				// limpio el html de los mensajes
+				messages[0].content = convert(messages[0].content, { wordwrap: 130 });
+
+
 				messages[0].content = messages[0].content.substring(0, 100) + '...';
 
 			}
@@ -92,15 +97,6 @@ module.exports = createCoreController('api::chat.chat', ({ strapi }) => ({
 			_items[i].lastMessage = messages[0];
 
 		}
-
-		console.log(_items);
-
-
-
-
-
-
-
 
 
 		const _lastPage = Math.ceil(_total / _limit);
@@ -461,6 +457,93 @@ module.exports = createCoreController('api::chat.chat', ({ strapi }) => ({
     memory: memory,
     model: model,
   }
+},
+
+async delete (ctx) {
+
+		// verifico este logueado
+
+		const { user } = ctx.state;
+
+		if (!user) return ctx.unauthorized("Unauthorized", {	error: "Unauthorized"});
+
+
+		// saco el id del chat
+
+		const { id } = ctx.params;
+
+		if (!id) return ctx.badRequest("Chat is required", { error: "Chat is required"});
+
+
+		// busco el chat en la base de datos
+
+
+		const chatModel = await strapi.db.query('api::chat.chat').findOne({
+
+			where: {
+
+				uuid: id,
+				user: user.id
+
+			},
+
+			
+
+		});
+
+		if (!chatModel) return ctx.badRequest("Chat not found", { error: "Chat not found"});
+
+
+		//	borro el chat
+
+
+
+		// elimino todos los mensajes del chat
+
+		// busco todos los mensajes del chat
+
+		const messages = await strapi.db.query('api::message.message').findMany({
+
+			where: {
+
+				chat: chatModel.id,
+			
+			},
+
+			limit : 1000,
+
+		});
+
+		// losr ecorro y elimino usando bluebird
+
+		await Promise.map(messages, async (message) => {
+
+			await strapi.db.query('api::message.message').delete({
+
+				where: {
+
+					id: message.id,
+
+				},
+
+			});
+
+		});
+
+
+
+		await strapi.db.query('api::chat.chat').delete({
+
+			where: {
+
+				uuid: id,
+
+			},
+
+		});
+
+		return ctx.send({ message: "Chat deleted" });
+
 }
 
 	
