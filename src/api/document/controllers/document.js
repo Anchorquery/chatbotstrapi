@@ -166,6 +166,8 @@ module.exports = createCoreController('api::document.document', ({ strapi }) => 
 				custom: true,
 				client: clienteEmpresa.id,
 				type: "file",
+				url :  imagenIN.url,
+				uuid : uuid(),
 				creator: user.id,
 				title: nombreFile,
 				grupoIncrustacion: grupoIncrustacion.id,
@@ -510,6 +512,7 @@ module.exports = createCoreController('api::document.document', ({ strapi }) => 
 					...doc.metadata,
 					client: nameClient,
 					file: nombre,
+					url : file.url
 				}
 
 			}

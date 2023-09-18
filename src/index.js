@@ -245,7 +245,7 @@ module.exports = {
 
             socket.emit('info', { message: 'Buscando mensajes en memoria' });
 
-            let [relationMessages,pastMessages] = await Promise.all([strapi.services['api::chat.custom-chat'].prepararMemoriaVector(socket.user.id, message, 5, chatModel.id), await strapi.services['api::chat.custom-chat'].prepararMemoria(message,chatModel, 1)]);
+            let [relationMessages,pastMessages] = await Promise.all([strapi.services['api::chat.custom-chat'].prepararMemoriaVector(socket.user.id, message, 5, chatModel.id), await strapi.services['api::chat.custom-chat'].prepararMemoria(message,chatModel, 10)]);
 
 
 
@@ -322,8 +322,14 @@ module.exports = {
                 let url = null;
                 let normalizedUrl = null;
                 if (match.type === 'file') {
+                  console.log(url)
                    url = source.split('uploads')[1];
-                   normalizedUrl = path.normalize(path.join(URL, 'uploads' + url)).replace(/\\/g, '/');
+                   normalizedUrl = path.normalize('/uploads' + url); 
+
+
+
+
+
                 }else{
                    normalizedUrl = match.url;
                    url = match.url;
@@ -482,7 +488,7 @@ module.exports = {
               uuid : uuidv4(),
             }
    
-              SupabaseVectorStoreCustom.fromTexts([message], { source: 'user' }, new OpenAIEmbeddings({ openAIApiKey: OPENAI_API_KEY }), dbConfig);
+              await SupabaseVectorStoreCustom.fromTexts([message], { source: 'user' }, new OpenAIEmbeddings({ openAIApiKey: OPENAI_API_KEY }), dbConfig);
 
               dbConfig.extraData = {
                 custom: true,
