@@ -87,7 +87,7 @@ module.exports = createCoreController('api::document.document', ({ strapi }) => 
 					where: {
 						client: clienteEmpresa.id,
 						title: nombreFile,
-						create: user.id
+					create: user.id
 					},
 					select: ['id']
 				}
@@ -250,7 +250,7 @@ module.exports = createCoreController('api::document.document', ({ strapi }) => 
 				{
 					where: {
 						uuid: client,
-						user: user.id
+					//	user: user.id
 					},
 					select: ['id', 'name']
 				}

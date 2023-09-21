@@ -30,7 +30,7 @@ module.exports = createCoreController('api::document-file.document-file', ({ str
 			folderR = await strapi.db.query('api::document-file.document-file').findOne({
 				where: {
 					uuid: folder,
-					create: user.id
+				//	create: user.id
 				}
 
 
@@ -51,7 +51,7 @@ module.exports = createCoreController('api::document-file.document-file', ({ str
 				title,
 				content,
 				parent: folderR ? folderR.id : null,
-				create: user.id,
+				//create: user.id,
 				words: content ? content.split(' ').length : 0
 			}
 
@@ -90,7 +90,7 @@ module.exports = createCoreController('api::document-file.document-file', ({ str
 		let document = await strapi.db.query('api::document-file.document-file').findOne({
 			where: {
 				uuid: id,
-				create: user.id
+			//	create: user.id
 			}
 		});
 
@@ -133,7 +133,7 @@ module.exports = createCoreController('api::document-file.document-file', ({ str
 		let document = await strapi.db.query('api::document-file.document-file').findOne({
 			where: {
 				uuid: id,
-				create: user.id
+			//	create: user.id
 			}
 		});
 
@@ -157,15 +157,15 @@ module.exports = createCoreController('api::document-file.document-file', ({ str
 		// verifico exista el documento y pertenezca al usuario
 
 		let documents = await strapi.db.query('api::document-file.document-file').findMany({
-			where: {
+		/*	where: {
 				create: user.id
-			}
+			}*/
 		});
 
 		let folders = await strapi.db.query('api::folder-client.folder-client').findMany({
-			where: {
+	/*		where: {
 				user: user.id
-			}
+			}*/
 		});
 
 		return ctx.send({ documents, folders });
@@ -211,7 +211,7 @@ console.log(ctx.request.body.data);
 			let clientR = await strapi.db.query('api::client.client').findOne({
 				where: {
 					uuid: client,
-					user: user.id
+				//	user: user.id
 				}
 			});
 
@@ -223,7 +223,7 @@ console.log(ctx.request.body.data);
 				clientR = await strapi.db.query('api::client.client').create({
 					data: {
 						name: name,
-						user: user.id
+				//		user: user.id
 					}
 				});
 			}
@@ -241,7 +241,7 @@ console.log(ctx.request.body.data);
 
 				where: {
 					uuid: parentFolder,
-					create: user.id
+				//	create: user.id
 				}
 
 			});
@@ -299,7 +299,7 @@ console.log(ctx.request.body.data);
 
 			// añado al where el usuario
 
-			_where.create = user.id;
+	//		_where.create = user.id;
 
 			// obtengo el nombre del padre
 
@@ -307,7 +307,7 @@ console.log(ctx.request.body.data);
 
 			let whereParent = {
 				uuid: _where.parent.uuid,
-				create: user.id
+				//create: user.id
 			};
 
 
@@ -336,7 +336,7 @@ console.log(ctx.request.body.data);
 			limit: _limit,
 			offset: _offset,
 			where: {
-				create: user.id,
+		//		create: user.id,
 				parent: {
 					 id :{
 							$null: true,
@@ -408,7 +408,7 @@ console.log(ctx.request.body.data);
 		let document = await strapi.db.query('api::document-file.document-file').findOne({
 			where: {
 				uuid: id,
-				create: user.id
+			//	create: user.id
 			}
 		});
 

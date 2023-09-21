@@ -116,7 +116,7 @@ module.exports = createCoreController('api::client.client' , ({ strapi }) => ({
 		const client = await strapi.db.query('api::client.client').findOne({
 			where: {
 				uuid: id,
-				user: user.id
+				//user: user.id
 			}
 		});
 
@@ -152,9 +152,9 @@ module.exports = createCoreController('api::client.client' , ({ strapi }) => ({
 		 _items = await strapi.db.query('api::client.client').findWithCount({
 			limit: _limit,
 			offset: _offset,
-			where: {
+			/*where: {
 				user: user.id,
-			},
+			},*/
 
 		});
 
