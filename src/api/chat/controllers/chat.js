@@ -380,12 +380,6 @@ module.exports = createCoreController('api::chat.chat', ({ strapi }) => ({
 		});
 
 			
-
-
-
-		
-
-
 		return ctx.send({messages: messages, prompt : prompt.title});
 
 
