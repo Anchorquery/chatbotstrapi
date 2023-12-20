@@ -195,14 +195,16 @@ module.exports = {
           socket.on('message', async (data) => {
 
             try {
-              let { message, sala, client } = data;
+              let { message, sala, client,cantidadVectoresMenajes,  cantidadMensajesHistorial } = data;
 
               message = message.trim();
   
   
   
   
-  
+              cantidadMensajesHistorial = cantidadMensajesHistorial || 10;
+
+              cantidadVectoresMenajes = cantidadVectoresMenajes || 5;
              
     
   
@@ -246,7 +248,7 @@ module.exports = {
   
               socket.emit('info', { message: 'Buscando mensajes en memoria' });
   
-              let [relationMessages,pastMessages] = await Promise.all([strapi.services['api::chat.custom-chat'].prepararMemoriaVector(socket.user.id, message, 5, chatModel.id), await strapi.services['api::chat.custom-chat'].prepararMemoria(message,chatModel, 10)]);
+              let [relationMessages,pastMessages] = await Promise.all([strapi.services['api::chat.custom-chat'].prepararMemoriaVector(socket.user.id, message, cantidadVectoresMenajes, chatModel.id), await strapi.services['api::chat.custom-chat'].prepararMemoria(message,chatModel, cantidadMensajesHistorial)]);
   
   
   
