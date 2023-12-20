@@ -19,5 +19,6 @@
     "titleBar.inactiveForeground": "#15202b99"
   },
   "peacock.color": "#f9e64f",
-  "nuxt.isNuxtApp": false
+  "nuxt.isNuxtApp": false,
+  "editor.inlineSuggest.showToolbar": "onHover"
 }

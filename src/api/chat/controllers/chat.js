@@ -364,11 +364,29 @@ module.exports = createCoreController('api::chat.chat', ({ strapi }) => ({
 		 }
 
 
+				// busco el prompt asociado al chat 
+
+
+		const prompt = await strapi.db.query('api::prompt.prompt').findOne({
+
+			where: {
+
+				id: chatModel.config.prompt.id,
+
+			},
+
+			select : ['title']
+
+		});
+
+			
+
+
 
 		
 
 
-		return ctx.send({messages: messages});
+		return ctx.send({messages: messages, prompt : prompt.title});
 
 
 

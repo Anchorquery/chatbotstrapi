@@ -1056,11 +1056,6 @@
     intl-messageformat "10.3.4"
     tslib "^2.4.0"
 
-"@heroicons/react@^2.0.18":
-  version "2.0.18"
-  resolved "https://registry.npmjs.org/@heroicons/react/-/react-2.0.18.tgz"
-  integrity sha512-7TyMjRrZZMBPa+/5Y8lN0iyvUU/01PeMGX2+RE7cQWpEUIcb4QotzUObFkJDejj/HUH4qjP/eQ0gzzKs2f+6Yw==
-
 "@internationalized/date@^3.4.0":
   version "3.5.0"
   resolved "https://registry.npmjs.org/@internationalized/date/-/date-3.5.0.tgz"
@@ -1928,6 +1923,16 @@
     react-redux "8.1.1"
     redux "^4.2.1"
     yup "0.32.9"
+
+"@strapi/plugin-sentry@^4.13.6":
+  version "4.13.6"
+  resolved "https://registry.npmjs.org/@strapi/plugin-sentry/-/plugin-sentry-4.13.6.tgz"
+  integrity sha512-q45hBLpw0bgJdfmKROOQC2uNuK45GL6+uNfFt6BbvPCOoYBEPPJN+KPQAZYuf/6aSAgz9FGfkdWv6gj2ZXU2JA==
+  dependencies:
+    "@sentry/node" "6.19.7"
+    "@strapi/design-system" "1.10.1"
+    "@strapi/helper-plugin" "4.13.6"
+    "@strapi/icons" "1.10.1"
 
 "@strapi/plugin-upload@4.13.6":
   version "4.13.6"
@@ -9491,7 +9496,7 @@ react-window@1.8.8:
     "@babel/runtime" "^7.0.0"
     memoize-one ">=3.1.1 <6"
 
-"react@^15.0.0 || ^16.0.0 || ^17.0.0 || ^18.0.0", "react@^16.13.1 || ^17.0.0 || ^18.0.0", "react@^16.3.0 || ^17.0.0 || ^18.0.0", "react@^16.6.0 || 17 || 18", "react@^16.8 || ^17.0 || ^18.0", "react@^16.8.0 || ^17.0.0 || ^18.0.0", "react@^17.0.0 || ^18.0.0", react@^18.2.0, "react@>= 16", "react@>= 16.14", "react@>= 16.8.0", react@>=15, react@>=16.13.1, react@>=16.3.0, react@>=16.6.0, react@>=16.8.0:
+"react@^15.0.0 || ^16.0.0 || ^17.0.0 || ^18.0.0", "react@^16.13.1 || ^17.0.0 || ^18.0.0", "react@^16.3.0 || ^17.0.0 || ^18.0.0", "react@^16.6.0 || 17 || 18", "react@^16.8 || ^17.0 || ^18.0", "react@^16.8.0 || ^17.0.0 || ^18.0.0", "react@^17.0.0 || ^18.0.0", react@^18.2.0, "react@>= 16.14", "react@>= 16.8.0", react@>=15, react@>=16.13.1, react@>=16.3.0, react@>=16.6.0, react@>=16.8.0:
   version "18.2.0"
   resolved "https://registry.npmjs.org/react/-/react-18.2.0.tgz"
   integrity sha512-/3IjMdb2L9QbBdWiW5e3P2/npwMBaU9mHCSCUzNln0ZCYbcfTsGbTJrU/kGemdH2IWmB2ioZ+zkxtmq6g09fGQ==
@@ -10485,13 +10490,6 @@ std-env@^3.0.1:
   version "3.4.3"
   resolved "https://registry.npmjs.org/std-env/-/std-env-3.4.3.tgz"
   integrity sha512-f9aPhy8fYBuMN+sNfakZV18U39PbalgjXG3lLB9WkaYTxijru61wb57V9wxxNthXM5Sd88ETBWi29qLAsHO52Q==
-
-strapi-plugin-heroicons-field@^0.0.3:
-  version "0.0.3"
-  resolved "https://registry.npmjs.org/strapi-plugin-heroicons-field/-/strapi-plugin-heroicons-field-0.0.3.tgz"
-  integrity sha512-YbjebnNeLMxb3dvrZgpc9R2hItfornKuat4EYI/+EzqhIMY9ZbGhJ4xGlJwcm2JAg/fv/ef7ZVsT3CnIh94SuA==
-  dependencies:
-    "@heroicons/react" "^2.0.18"
 
 strapi-plugin-slugify@^2.3.4:
   version "2.3.4"
