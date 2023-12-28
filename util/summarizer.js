@@ -1,9 +1,11 @@
-const { OpenAI } = require("langchain/llms");
+const { OpenAI } =  require("langchain/llms/openai");
 const { templates } = require('./templates');
-const { LLMChain, PromptTemplate } = require("langchain");
+const { PromptTemplate } = require ("langchain/prompts");
 const Bottleneck = require("bottleneck").default;
 const { StructuredOutputParser } = require("langchain/output_parsers");
 
+
+const { LLMChain } = require("langchain/chains");
 const llm = new OpenAI({ concurrency: 10, temperature: 0, modelName: "gpt-3.5-turbo" });
 
 

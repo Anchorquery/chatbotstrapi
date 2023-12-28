@@ -1,5 +1,5 @@
 const Queue = require('bull');
-const {SiteMapLoader} = require("../../util/crawlers/site-map-loader.js");
+const { SiteMapLoader } = require("../../util/crawlers/site-map-loader.js");
 const { convert } = require('html-to-text');
 const { Crawler } = require('../crawlers/crawler.js');
 const { Document } = require("langchain/document");
@@ -7,7 +7,7 @@ const { summarizeLongDocument } = require('../summarizer.js');
 const { OpenAIEmbeddings } = require('langchain/embeddings/openai');
 const SupabaseVectorStoreCustom = require('../supabase.js');
 const clientS = require('../../util/superbase-client.js');
-const Promise	= require('bluebird');
+const Promise = require('bluebird');
 const { RecursiveCharacterTextSplitter } = require('langchain/text_splitter');
 const path = require('path');
 const fs = Promise.promisifyAll(require('fs'));
@@ -18,11 +18,11 @@ const textSplitter = new RecursiveCharacterTextSplitter({
 	chunkOverlap: chunkOverlap,
 });
 const embading = new OpenAIEmbeddings({
-		openAIApiKey: process.env.OPENAI_API_KEY,
-		//batchSize: 300,
-		modelName: 'text-embedding-ada-002',
+	openAIApiKey: process.env.OPENAI_API_KEY,
+	//batchSize: 300,
+	modelName: 'text-embedding-ada-002',
 
-	}
+}
 
 );
 const dbConfig = {
@@ -31,10 +31,10 @@ const dbConfig = {
 	query_name: 'match_documents_2',
 };
 module.exports = class DocumentSitemapQueue {
-	constructor( user, groupIncrust) {
-		this.user =  user;
+	constructor(user, groupIncrust) {
+		this.user = user;
 		this.groupIncrust = groupIncrust;
-	//	this.progress = 0;
+		//	this.progress = 0;
 		this.queue = new Queue('document-queue', {
 			redis: process.env.REDIS_URL,
 			limiter: {
@@ -50,20 +50,20 @@ module.exports = class DocumentSitemapQueue {
 		})
 
 		this.queue.on('waiting', function (jobId) {
-			
-			// @ts-ignore
-			strapi.io.in(`user_${user.uuid}`).emit('messageTaskSchedule', {type:'waiting', message: `Tarea en espera` });
-		strapi.db.query('api::grupo-de-incrustacion.grupo-de-incrustacion').update({
-				
-				where : {
 
-					id : groupIncrust
+			// @ts-ignore
+			strapi.io.in(`user_${user.uuid}`).emit('messageTaskSchedule', { type: 'waiting', message: `Tarea en espera` });
+			strapi.db.query('api::grupo-de-incrustacion.grupo-de-incrustacion').update({
+
+				where: {
+
+					id: groupIncrust
 
 				},
-					data:{
-						queueState : 'waiting',
-						inQueue:	true
-					}
+				data: {
+					queueState: 'waiting',
+					inQueue: true
+				}
 
 			});
 		});
@@ -73,19 +73,19 @@ module.exports = class DocumentSitemapQueue {
 
 
 			// @ts-ignore
-			strapi.io.in(`user_${user.uuid}`).emit('messageTaskSchedule', {type:'active', message: `Tarea en proceso` });
+			strapi.io.in(`user_${user.uuid}`).emit('messageTaskSchedule', { type: 'active', message: `Tarea en proceso` });
 
 			strapi.db.query('api::grupo-de-incrustacion.grupo-de-incrustacion').update({
-				
-				where : {
 
-					id : groupIncrust
+				where: {
+
+					id: groupIncrust
 
 				},
-					data:{
-						queueState : 'active',
-						inQueue:	true
-					}
+				data: {
+					queueState: 'active',
+					inQueue: true
+				}
 
 			});
 		});
@@ -94,19 +94,19 @@ module.exports = class DocumentSitemapQueue {
 			console.log(`A job with ID ${job.id} has been completed`);
 
 			// @ts-ignore
-			strapi.io.in(`user_${user.uuid}`).emit('messageTaskSchedule', {type:'completed', message: `Tarea completada` });
+			strapi.io.in(`user_${user.uuid}`).emit('messageTaskSchedule', { type: 'completed', message: `Tarea completada` });
 
 			strapi.db.query('api::grupo-de-incrustacion.grupo-de-incrustacion').update({
-				
-				where : {
 
-					id : groupIncrust
+				where: {
+
+					id: groupIncrust
 
 				},
-					data:{
-						queueState : 'completed',
-						inQueue:	false
-					}
+				data: {
+					queueState: 'completed',
+					inQueue: false
+				}
 
 			});
 		});
@@ -124,7 +124,7 @@ module.exports = class DocumentSitemapQueue {
 
 		this.queue.on('progress', function (job, progress) {
 			// @ts-ignore
-	strapi.io.in(`user_${user.uuid}`).emit('messageTaskSchedule', {type:'progress', message: `Tarea en proceso`, progress: progress });
+			strapi.io.in(`user_${user.uuid}`).emit('messageTaskSchedule', { type: 'progress', message: `Tarea en proceso`, progress: progress });
 		})
 
 
@@ -134,25 +134,25 @@ module.exports = class DocumentSitemapQueue {
 		this.queue.add('document-queue', data)
 	}
 	async processDocument(job) {
-		const { urlOrTxt,nombreFile,clienteEmpresa,summarize,cleanHtml,puppeteer,user, grupoIncrustacion, filterUrl = [], blocksize = 0 , blocknum = 0, minLenChar = 200,recursivity =false,type ='sitemap' } = job.data;
+		const { urlOrTxt, nombreFile, clienteEmpresa, summarize, cleanHtml, puppeteer, user, grupoIncrustacion, filterUrl = [], blocksize = 0, blocknum = 0, minLenChar = 200, recursivity = false, type = 'sitemap' } = job.data;
 		try {
-		let urls = [];
-		let limit = 0;
-			if(type == 'sitemap'){
-			// mando el mensaje de analizando sitemap
-			// @ts-ignore
-			strapi.io.in(`user_${this.user.uuid}`).emit('messageTaskSchedule', {type:'message', message: `Analizando sitemap` });
-		const sitemapLoader = new SiteMapLoader(urlOrTxt, filterUrl, blocksize, blocknum, minLenChar);
-		urls =  await Promise.resolve(sitemapLoader.load());
+			let urls = [];
+			let limit = 0;
+			if (type == 'sitemap') {
+				// mando el mensaje de analizando sitemap
+				// @ts-ignore
+				strapi.io.in(`user_${this.user.uuid}`).emit('messageTaskSchedule', { type: 'message', message: `Analizando sitemap` });
+				const sitemapLoader = new SiteMapLoader(urlOrTxt, filterUrl, blocksize, blocknum, minLenChar);
+				urls = await Promise.resolve(sitemapLoader.load());
 
-		// envio un mensaje con las urls encontradas
-		// @ts-ignore
-		strapi.io.in(`user_${this.user.uuid}`).emit('messageTaskSchedule', {type:'message', message: `Se encontraron ${urls.length} urls` });
-			}else if(type == 'individual'){
+				// envio un mensaje con las urls encontradas
+				// @ts-ignore
+				strapi.io.in(`user_${this.user.uuid}`).emit('messageTaskSchedule', { type: 'message', message: `Se encontraron ${urls.length} urls` });
+			} else if (type == 'individual') {
 
 				urls = [urlOrTxt];
-			// @ts-ignore
-			strapi.io.in(`user_${this.user.uuid}`).emit('messageTaskSchedule', {type:'message', message: `Analizando Url` });
+				// @ts-ignore
+				strapi.io.in(`user_${this.user.uuid}`).emit('messageTaskSchedule', { type: 'message', message: `Analizando Url` });
 
 				if (recursivity == 'true' || recursivity == true) {
 					limit = 50;
@@ -160,36 +160,36 @@ module.exports = class DocumentSitemapQueue {
 
 
 
-			}else	if(type == 'txt'){
+			} else if (type == 'txt') {
 
 				urls = await Promise.resolve(this.readUrlsFromTxt(urlOrTxt));
 
 				// @ts-ignore
-				strapi.io.in(`user_${this.user.uuid}`).emit('messageTaskSchedule', {type:'message', message: `Se encontraron ${urls.length} urls en el txt` });
+				strapi.io.in(`user_${this.user.uuid}`).emit('messageTaskSchedule', { type: 'message', message: `Se encontraron ${urls.length} urls en el txt` });
 
 			}
 
-		// si no hay	urls, terminar
-		if (urls.length == 0) {
+			// si no hay	urls, terminar
+			if (urls.length == 0) {
 
-			job.moveToCompleted('done', true)
-			return;
-		}
+				job.moveToCompleted('done', true)
+				return;
+			}
 
 
-			let 	docs = await Promise.resolve(this.createDocumtUrlCrawler(nombreFile, urls,clienteEmpresa.name,{	limit: limit, summarize: summarize, cleanHtml: cleanHtml, puppeteer: puppeteer }));
+			let docs = await Promise.resolve(this.createDocumtUrlCrawler(nombreFile, urls, clienteEmpresa.name, { limit: limit, summarize: summarize, cleanHtml: cleanHtml, puppeteer: puppeteer }));
 
 			dbConfig.extraData = {
 				custom: true,
 				client: clienteEmpresa.id,
 				type: "url",
 				creator: user.id,
-				title: nombreFile ? nombreFile : urls.length == 1	? urls[0] : 'Varios documentos',
+				title: nombreFile ? nombreFile : urls.length == 1 ? urls[0] : 'Varios documentos',
 				grupoIncrustacion: grupoIncrustacion.id,
 
 			}
 
-			await Promise.resolve(this.processDocs(job,docs, embading, dbConfig));
+			await Promise.resolve(this.processDocs(job, docs, embading, dbConfig));
 
 
 			job.moveToCompleted('done', true)
@@ -199,58 +199,62 @@ module.exports = class DocumentSitemapQueue {
 			}
 		}
 	}
-	 async processDocs (job,docs, embading, dbConfig){
-  try {
-// @ts-ignore
-			strapi.io.in(`user_${this.user.uuid}`).emit('messageTaskSchedule', {type:'message', message: `Tarea en proceso, ${docs.length} documentos fueron encontrados, iniciando incrustación` });
+	async processDocs(job, docs, embading, dbConfig) {
+		try {
+			// @ts-ignore
+			strapi.io.in(`user_${this.user.uuid}`).emit('messageTaskSchedule', { type: 'message', message: `Tarea en proceso, ${docs.length} documentos fueron encontrados, iniciando incrustación` });
 			const totalTasks = docs.length;
 			let completedTasks = 0;
 
-    await Promise.map(docs, async (doc) => {
+			await Promise.map(docs, async (doc) => {
 
-    completedTasks++;
+				completedTasks++;
 
-    // Calcula el progreso global
-    const progress = (completedTasks / totalTasks) * 100;
-
-
-					job.progress(progress);
+				// Calcula el progreso global
+				const progress = (completedTasks / totalTasks) * 100;
 
 
+				job.progress(progress);
 
 
 
+
+
+
+				try {
+					await SupabaseVectorStoreCustom.fromDocuments(doc, embading, dbConfig);
+				} catch (error) {
+					console.log(error);
+				}
 				
+			}, { concurrency: 5 }); // Puedes ajustar la cantidad de promesas en paralelo (en este caso, 5)
 
-      await SupabaseVectorStoreCustom.fromDocuments(doc, embading, dbConfig);
-    }, { concurrency: 5 }); // Puedes ajustar la cantidad de promesas en paralelo (en este caso, 5)
+			console.log('Todas las promesas se han completado con éxito.');
 
-    console.log('Todas las promesas se han completado con éxito.');
-
-				// @ts-ignore
-				strapi.io.in(`user_${this.user.uuid}`).emit('messageTaskSchedule', {type:'end', message: `Tarea finalizada, ${totalTasks} documentos fueron insertados` });
+			// @ts-ignore
+			strapi.io.in(`user_${this.user.uuid}`).emit('messageTaskSchedule', { type: 'end', message: `Tarea finalizada, ${totalTasks} documentos fueron insertados` });
 
 
 
-				await strapi.db.query('api::grupo-de-incrustacion.grupo-de-incrustacion').update({
+			await strapi.db.query('api::grupo-de-incrustacion.grupo-de-incrustacion').update({
 
-					where : {
+				where: {
 
-						id : this.groupIncrust
+					id: this.groupIncrust
 
-					},
-						data:{
-							queueState : 'finalizado'
-						}
+				},
+				data: {
+					queueState: 'finalizado'
+				}
 
-				});
+			});
 
-  } catch (error) {
+		} catch (error) {
 			// lanzo un error
-				
-    console.error('Ocurrió un error al procesar las promesas:', error);
-  }
-}
+
+			console.error('Ocurrió un error al procesar las promesas:', error.message );
+		}
+	}
 	// @ts-ignore
 	async createDocumtUrlCrawler(nombre, urls, nameClient = null, { limit = 0, summarize = false, cleanHtml = false, puppeteer = false } = {}) {
 
@@ -265,37 +269,37 @@ module.exports = class DocumentSitemapQueue {
 
 			const shouldSummarize = summarize === true;
 			const crawler = new Crawler(urls, limit, 1);
-			const pages =await Promise.resolve(crawler.start());
+			const pages = await Promise.resolve(crawler.start());
 
 
 
 
 			const options = {
 
-					// Extrae solo texto y elimina etiquetas HTML
-					ignoreImage: true,  // Ignora las etiquetas de imagen
-					noLinkBrackets: true,  // Elimina los corchetes de enlaces
-					uppercaseHeadings: false,  // No convierte los encabezados a mayúsculas
-					ignoreHref: true,  // Ignora los enlaces (URL)
-					ignoreAnchor: true,  // Ignora las anclas (nombres de enlaces)
-					tables: true,  // Procesa tablas y extrae su contenido
-					
+				// Extrae solo texto y elimina etiquetas HTML
+				ignoreImage: true,  // Ignora las etiquetas de imagen
+				noLinkBrackets: true,  // Elimina los corchetes de enlaces
+				uppercaseHeadings: false,  // No convierte los encabezados a mayúsculas
+				ignoreHref: true,  // Ignora los enlaces (URL)
+				ignoreAnchor: true,  // Ignora las anclas (nombres de enlaces)
+				tables: true,  // Procesa tablas y extrae su contenido
+
 			};
 
 
 
 			const documents = await Promise.all(pages.map(async row => {
 
-				if(cleanHtml){
+				if (cleanHtml) {
 
 					row.text = convert(row.text, options);
 				}
 
 
 				let pageContent = shouldSummarize
-	
+
 					// @ts-ignore
-					? await summarizeLongDocument({ document: row.text , forceSummarize: true })
+					? await summarizeLongDocument({ document: row.text, forceSummarize: true })
 					: row.text;
 
 				if (!shouldSummarize) {
@@ -306,9 +310,9 @@ module.exports = class DocumentSitemapQueue {
 				let chuckHeader = `DOCUMENT NAME: ${row.title} . \n \n`;
 
 				if (nameClient) {
-	
+
 					chuckHeader += `PROPERTY DOCUMENT: ${nameClient} .\n \n`;
-	
+
 				}
 
 
@@ -324,7 +328,14 @@ module.exports = class DocumentSitemapQueue {
 			return documents;
 
 		} catch (error) {
+			// lanzo un error
+
+
 			console.log(error);
+
+
+
+			throw new Error(error);
 		}
 	}
 
@@ -343,7 +354,7 @@ module.exports = class DocumentSitemapQueue {
 			// Combinar la ubicación del archivo con la parte relativa
 			const absolutePath = path.join(parentDirectory, relativePath);
 
-			const data = await fs.promises.readFile(absolutePath, 'utf8');	
+			const data = await fs.promises.readFile(absolutePath, 'utf8');
 
 			const array = data.toString().split("\n");
 

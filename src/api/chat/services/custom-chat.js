@@ -378,12 +378,15 @@ async prepararMemoriaVector(idUser, message, match_count, sala ) {
 
     
 
-    const {data} = await clientS.rpc('query_messages', {
+    let {data} = await clientS.rpc('query_messages', {
       query_embedding: embeddings,
       match_threshold: 0.78,
       match_count:match_count, 
       sala : sala ? sala : null,
     });
+
+    data = data ?? [];
+
 
     strapi.io.in(`user_${sala}`).emit('info', { message: `Se encontraron ${data.length} mensajes relacionados a la consulta.` });
 
@@ -398,7 +401,7 @@ async prepararMemoriaVector(idUser, message, match_count, sala ) {
     
   } catch (error) {
     console.log(error)
-    throw new Error(`Error querying embeddings: ${error}`);
+   /// throw new Error(`Error querying embeddings: ${error}`);
   }
 
 

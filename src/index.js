@@ -3,22 +3,21 @@
 
 
 const { BufferMemory, ChatMessageHistory } = require("langchain/memory");
-const { ConversationChain, LLMChain } = require("langchain/chains");
+const { LLMChain } = require("langchain/chains");
 const { v4: uuidv4 } = require('uuid');
 const { ChatOpenAI } = require("langchain/chat_models/openai");
 const { CallbackManager } = require("langchain/callbacks");
 const Promise = require('bluebird');
 const { OpenAIEmbeddings } = require("langchain/embeddings/openai");
 const path = require('path');
-const { PromptTemplate, OpenAI } = require("langchain");
-const { templates } = require("../util/templates");
+const { PromptTemplate } = require ("langchain/prompts");
 const { summarizeLongDocument } = require("../util/summarizer");
 const SupabaseVectorStoreCustom = require("../util/supabase");
 const clientS = require('../util/superbase-client.js');
-const chat = require("./api/chat/controllers/chat");
+
 const { OPENAI_API_KEY } = process.env;
 let { URL } = process.env;
-const llm = new OpenAI({});
+
 module.exports = {
   /**
    * An asynchronous register function that runs before
@@ -290,9 +289,13 @@ module.exports = {
   
   
   
-              const matches = await strapi.services['api::chat.custom-chat'].getMatchesFromEmbeddings(socket.user.id, inquiry, 10, client);
+              let matches = await strapi.services['api::chat.custom-chat'].getMatchesFromEmbeddings(socket.user.id, inquiry, 10, client);
   
               // emito mensaje de que se han encontrado documentos relacionados
+
+              if(!matches){
+                matches = [];
+              }
   
               socket.emit('info', { message: `Se encontraron ${matches.length} documentos relacionados ` });
   
@@ -527,11 +530,6 @@ module.exports = {
             socket.disconnect(true);
             
           });
-
-
-
-
-
 
         })
 

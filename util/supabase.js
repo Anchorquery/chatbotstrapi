@@ -1,4 +1,5 @@
-const { VectorStore } = require("langchain/vectorstores");
+const { VectorStore } = require("@langchain/core/vectorstores");
+
 const { Document } = require("langchain/document");
 const { v4: uuid } = require("uuid");
 /**
@@ -122,6 +123,8 @@ module.exports = class SupabaseVectorStoreCustom extends VectorStore {
                 uuid : options.uuid ? options.uuid : uuid(),
             }));
         }
+
+        console.log('rows', rows);
 
 
         // upsert returns 500/502/504 (yes really any of them) if given too many rows/characters

@@ -36,7 +36,7 @@ module.exports = createCoreController('api::document.document', ({ strapi }) => 
 	async uploadEmbadding(ctx) {
 		try {
 			const { user } = ctx.state;
-
+			
 			if (!user) return ctx.unauthorized("Unauthorized", { message: 'Unauthorized' });
 
 
@@ -66,7 +66,7 @@ module.exports = createCoreController('api::document.document', ({ strapi }) => 
 
 			);
 
-
+			
 
 			if (!clienteEmpresa) return ctx.badRequest("Client not found", { message: 'Client not found' });
 
@@ -180,16 +180,23 @@ module.exports = createCoreController('api::document.document', ({ strapi }) => 
 
 
 
-
+		try {
 			await SupabaseVectorStoreCustom.fromDocuments(
 				docs,
 				embading,
 				dbConfig,
 			);
+		} catch (error) {
+			
+			 console.log(error);
+		}
+
 
 
 			return ctx.send({ message: 'File uploaded' });
 		} catch (error) {
+
+		
 			console.log(error)
 
 		}
@@ -532,11 +539,5 @@ module.exports = createCoreController('api::document.document', ({ strapi }) => 
 
 
 	},
-
-
-
-
-
-
 
 }));
