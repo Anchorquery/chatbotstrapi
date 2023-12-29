@@ -527,7 +527,7 @@ module.exports = {
           socket.on('disconnect', async (socket) => {
             console.log(`Cliente ${socket.id} se ha desconectado`);
 
-            socket.disconnect(true);
+         
             
           });
 

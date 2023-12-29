@@ -194,6 +194,19 @@ module.exports = class SupabaseVectorStoreCustom extends VectorStore {
                     }
                     return row;
                 });
+
+                /*const exite = await strapi.db.query('api::document.document').findOne({
+
+                    where : {
+
+                        type : chunk[0].type,
+                        url : chunk[0].url,
+                        client : chunk[0].client,
+                    
+                    },
+
+                    select : ['id']
+                });*/
                 const res = await this.client.from(this.tableName).upsert(chunk).select();
     
     
