@@ -12,7 +12,6 @@
   },
   "pluginOptions": {},
   "attributes": {
-
     "uuid": {
       "type": "string",
       "configurable": false
@@ -22,6 +21,15 @@
     },
     "description": {
       "type": "text"
+    },
+    "category_father": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::prompts-category.prompts-category"
+    },
+    "principal": {
+      "type": "boolean",
+      "default": false
     }
   }
 }

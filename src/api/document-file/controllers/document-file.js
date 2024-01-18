@@ -3,7 +3,8 @@
 /**
 	* document-file controller
 	*/
-const showdown = require('showdown')
+const showdown = require('showdown');
+const client = require('../../client/controllers/client');
 
 const { createCoreController } = require('@strapi/strapi').factories;
 
@@ -409,8 +410,18 @@ console.log(ctx.request.body.data);
 			where: {
 				uuid: id,
 			//	create: user.id
+			},
+			populate : {
+				client:true
 			}
 		});
+		console.log(document)
+		if(document.isFolder && document.client){
+
+			//debo borrar el cliente
+
+			await strapi.entityService.delete('plugin::users-permissions.user', document.client.id);
+		}
 
 		if (!document) return ctx.badRequest("document not found or not belong to user");
 

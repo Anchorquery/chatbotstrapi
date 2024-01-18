@@ -14,7 +14,7 @@ const { PromptTemplate } = require ("langchain/prompts");
 const { summarizeLongDocument } = require("../util/summarizer");
 const SupabaseVectorStoreCustom = require("../util/supabase");
 const clientS = require('../util/superbase-client.js');
-
+const { convert } = require('html-to-text');
 const { OPENAI_API_KEY } = process.env;
 let { URL } = process.env;
 
@@ -194,9 +194,11 @@ module.exports = {
           socket.on('message', async (data) => {
 
             try {
-              let { message, sala, client,cantidadVectoresMenajes,  cantidadMensajesHistorial } = data;
+              let { message, sala, client,cantidadVectoresMenajes,  cantidadMensajesHistorial, language,tone } = data;
 
               message = message.trim();
+
+             
   
   
   
@@ -205,14 +207,23 @@ module.exports = {
 
               cantidadVectoresMenajes = cantidadVectoresMenajes || 5;
              
-    
-  
   
               if (!sala) {
   
-                socket.emit('error', { message: 'Chat no encontrado' });
-  
-                return;
+                // creo un nuevo chat
+                sala = uuidv4();
+                await strapi.db.query('api::chat.chat').create({
+
+                  data: {
+    
+                    // @ts-ignore
+                    user: socket.user.id,
+                    uuid: sala,
+                   
+    
+                  }
+    
+                })
   
               }
   
@@ -250,24 +261,13 @@ module.exports = {
               let [relationMessages,pastMessages] = await Promise.all([strapi.services['api::chat.custom-chat'].prepararMemoriaVector(socket.user.id, message, cantidadVectoresMenajes, chatModel.id), await strapi.services['api::chat.custom-chat'].prepararMemoria(message,chatModel, cantidadMensajesHistorial)]);
   
   
-  
-  
-             /* const inquiryChain = new LLMChain({
-                llm, prompt: new PromptTemplate({
-                  template: templates.inquiryTemplate,
-                  inputVariables: ["userPrompt", "conversationHistory"],
-                })
-              });
-             const inquiryChainResult = await inquiryChain.call({ userPrompt: message, conversationHistory: pastMessages })*/
               const inquiry = message
   
   
               const memory = new BufferMemory({
                 chatHistory: new ChatMessageHistory(pastMessages),
-                //   returnMessages: true, //optional
                 memoryKey: "immediateHistory",
                 inputKey: "input",
-                //  outputKey: "answer", 
                 aiPrefix: "AI: ",
                 humanPrefix: "Human: ",
   
@@ -278,11 +278,7 @@ module.exports = {
   
               socket.emit('info', { message: 'Memoria preparada' });
   
-  
-  
-         
-  
-  
+
               // emito mensaje de que se estan buscando documentos relacionados
   
               socket.emit('info', { message: 'Buscando documentos relacionados con la consulta' });
@@ -331,11 +327,7 @@ module.exports = {
                     console.log(url)
                      url = source.split('uploads')[1];
                      normalizedUrl = path.normalize('/uploads' + url); 
-  
-  
-  
-  
-  
+
                   }else{
                      normalizedUrl = match.url;
                      url = match.url;
@@ -373,20 +365,59 @@ module.exports = {
   
               });
   
-              /*
-                
-              version antigua que maneja sciertos casos de promtps
-              
-              const promptTemplate = new PromptTemplate({
-                template: matches.length>0 ? templates.qaTemplate2 : templates.defaultTemplate,
-                inputVariables:matches.length>0 ? ["summaries", "question", "conversationHistory"] : ["conversationHistory", "question"]
-              });*/
-  
-              // le quito los saltos de linea al prompt
-  
               let promtp = null;
+              if(matches.length> 0)  {
+                promtp = `
+                - Se dará INPUT , CHATHISTORY, MEMORY y RELEVANTDOCS
+                - INPUT corresponde al mensaje que el usuario está enviando, puede ser una pregunta o una petición. 
+                - CHATHISTORY es una memoria con mensajes pasados que tiene relacion con el mensaje del usuario. 
+                - MEMORY corresponde a los ultimos mensajes de la conversación en orden cronologico. 
+                - RELEVANTDOCS , información relevante que guarda relación con el mensaje del usuario (INPUT).
+                -Se proporciona parte del historial de chat como JSON, no debes mostrar este JSON. No inicies tu respuesta con "AI:" o "Como asistente de IA". 
+                - Tienes acceso al historial de chat con el usuario (CHATHISTORY/MEMORY) y al contexto (RELEVANTDOCS) proporcionado por el usuario. 
+                - Al responder, piensa si el mensaje (INPUT) se refiere a algo en la MEMORY o en el CHATHISTORY antes de consultar los RELEVANTDOCS. 
+                - Si el mensaje del usuario (INPUT) no tiene relación con la MEMORIA o con el CHATHISTORY no los uses como referencia. Si no tienen información no la inventes. 
+                - No justifiques tus respuestas, si el INPUT no tiene ninguna relación o sentido con MEMORY,CHATHISTORY o  RELEVANTDOCS  entonces no los uses como contexto. 
+                - No te refieras a ti mismo en ninguno de los contenidos creados. 
+                - Siempre responde en {idioma}.
+                - Siempre responde utilizando un tono {tone}. 
+                - Siempre responde en texto enriquecido, usando encabezados, listas, parrafos , negritas , entre otras etiquetas que sean oportunas.
+                - Tu objetivo principal es responder sin inventar nada. Si no tienes inforamción para responder , avisa que no puedes dar una respuesta clara por falta de contexto.   
+                
+                RELEVANTDOCS: {context}
+                 
+                CHATHISTORY: {history}
+                 
+                MEMORY: {immediateHistory}
+                
+                INPUT : {input}
+                
+                Respuesta final :`;
+              }else{
+                promtp = `
+                - Se dará INPUT y MEMORY.
+                - INPUT corresponde al mensaje que el usuario está enviando, puede ser una pregunta o una petición. 
+                - MEMORY corresponde a los ultimos mensajes de la conversación en orden cronologico. 
+                - No te refieras a ti mismo en ninguno de los contenidos creados. 
+                - Siempre responde en {idioma}.
+                - Siempre responde utilizando un tono {tone}. 
+                - Siempre responde en texto enriquecido, usando encabezados, listas, parrafos , negritas , entre otras etiquetas que sean oportunas. 
+                
+                 
+                CHATHISTORY: {history}
+                 
+                MEMORY: {immediateHistory}
+                
+                INPUT : {input}
+                
+                Respuesta final :`;
+
+
+              }
   
-              if(chatModel.config.prompt.id){
+
+  
+            /*  if(chatModel.config?.prompt.id){
   
                 promtp = await strapi.db.query('api::prompt.prompt').findOne({
   
@@ -411,7 +442,7 @@ module.exports = {
               if(!promtp){
   
                 promtp = chatModel.config.prompt.content.replace(/\n/g, " ");
-              }
+              }*/
   
   
   
@@ -419,7 +450,7 @@ module.exports = {
               
               const promptTemplate = new PromptTemplate({
                 template: promtp,
-                inputVariables: ["context", "input", "immediateHistory", "history", "idioma", "tone"]
+                inputVariables: matches.length> 0 ? ["context", "input", "immediateHistory", "history", "idioma", "tone"] : [ "input", "immediateHistory", "history", "idioma", "tone"]
               });
   
   
@@ -448,7 +479,7 @@ module.exports = {
                   async handleLLMEnd(result) {
   
   
-                    socket.emit('messageEnd', { message: result , source : source, uuid : uuidv4() });
+                    socket.emit('messageEnd', { message: result , source : source, uuid : uuidv4() , sala: sala});
   
                     // si hay source mando el source
   
@@ -478,8 +509,8 @@ module.exports = {
                   history : relationMessages,
                   input: inquiry,
                   context: summary,
-                  idioma: chatModel.config.language || 'Español',
-                  tone: chatModel.config.tone || 'Formal',
+                  idioma: language || 'Español',
+                  tone: tone || 'Formal',
                 },
   
               )

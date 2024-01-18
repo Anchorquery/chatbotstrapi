@@ -222,7 +222,7 @@ module.exports = createCoreController('api::chat.chat', ({ strapi }) => ({
 
 
 
-		template = template + `\n respuesta siempre en: {language} \n usando un tono : {tone} en la conversacion \n , formatea la respuesta en etiquetas html`;
+		template = template + `\n respuesta siempre en: {language} \n usando un tono : {tone} en la conversacion \n , formatea la respuesta en texto enriquecido`;
 
 		const initializedPrompt = new PromptTemplate({ template, inputVariables: ["language", "tone"]  });
 
@@ -367,7 +367,7 @@ module.exports = createCoreController('api::chat.chat', ({ strapi }) => ({
 				// busco el prompt asociado al chat 
 
 
-		const prompt = await strapi.db.query('api::prompt.prompt').findOne({
+		/*const prompt = await strapi.db.query('api::prompt.prompt').findOne({
 
 			where: {
 
@@ -377,10 +377,24 @@ module.exports = createCoreController('api::chat.chat', ({ strapi }) => ({
 
 			select : ['title']
 
-		});
+		});*/
+
+		// saco el mensaje
+		let titulo ="";
+		if(messages[0]){
+ titulo = messages[0].content
+	titulo = convert(titulo, { wordwrap: 130 });
+
+
+	titulo = titulo.substring(0, 30) + '...';		
+
+
+
+
+		}
 
 			
-		return ctx.send({messages: messages, prompt : prompt.title});
+		return ctx.send({messages: messages, prompt : titulo });
 
 
 
