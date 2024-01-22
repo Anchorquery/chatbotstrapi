@@ -420,7 +420,7 @@ console.log(ctx.request.body.data);
 
 			//debo borrar el cliente
 
-			await strapi.entityService.delete('plugin::users-permissions.user', document.client.id);
+			await strapi.entityService.delete('api::client.client', document.client.id);
 		}
 
 		if (!document) return ctx.badRequest("document not found or not belong to user");
