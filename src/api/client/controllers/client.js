@@ -152,6 +152,7 @@ module.exports = createCoreController('api::client.client' , ({ strapi }) => ({
 		 _items = await strapi.db.query('api::client.client').findWithCount({
 			limit: _limit,
 			offset: _offset,
+			orderBy: { name: 'asc' },
 			/*where: {
 				user: user.id,
 			},*/
