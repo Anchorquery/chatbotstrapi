@@ -42,6 +42,7 @@ module.exports = {
   bootstrap({ strapi }) {
 
     process.nextTick(() => {
+
       try {
         let interval;
         // @ts-ignore
@@ -198,6 +199,9 @@ module.exports = {
 
               message = message.trim();
 
+              let mentions = extractMentionData(message,true);
+              
+              console.log(mentions)
              
   
   
@@ -257,8 +261,14 @@ module.exports = {
               // emito un mensaje indicando que se buscan mensajes anteriores
   
               socket.emit('info', { message: 'Buscando mensajes en memoria' });
+
+              let relationMessages = [];
+              let pastMessages=[];
+              if(mentions.length == 0 ){
+                 [relationMessages,pastMessages] = await Promise.all([strapi.services['api::chat.custom-chat'].prepararMemoriaVector(socket.user.id, message, cantidadVectoresMenajes, chatModel.id), await strapi.services['api::chat.custom-chat'].prepararMemoria(message,chatModel, cantidadMensajesHistorial)]);
+              }
   
-              let [relationMessages,pastMessages] = await Promise.all([strapi.services['api::chat.custom-chat'].prepararMemoriaVector(socket.user.id, message, cantidadVectoresMenajes, chatModel.id), await strapi.services['api::chat.custom-chat'].prepararMemoria(message,chatModel, cantidadMensajesHistorial)]);
+
   
   
               const inquiry = message
@@ -285,7 +295,7 @@ module.exports = {
   
   
   
-              let matches = await strapi.services['api::chat.custom-chat'].getMatchesFromEmbeddings(socket.user.id, inquiry, 10, client);
+              let matches = await strapi.services['api::chat.custom-chat'].getMatchesFromEmbeddings(socket.user.id, inquiry, cantidadVectoresMenajes, client,mentions);
   
               // emito mensaje de que se han encontrado documentos relacionados
 
@@ -317,7 +327,7 @@ module.exports = {
                 }, new Map()).values()
               );*/
   
-              const source = matches && Array.from(
+              /*const source = matches && Array.from(
                 matches.reduce((map, match) => {
                   const metadata = match.metadata || {};
                   const { source } = metadata;
@@ -357,7 +367,7 @@ module.exports = {
                   
                   return map;
                 }, new Map()).values()
-              );
+              );*/
               
               let docs = matches.map((match) => {
   
@@ -414,39 +424,7 @@ module.exports = {
 
 
               }
-  
 
-  
-            /*  if(chatModel.config?.prompt.id){
-  
-                promtp = await strapi.db.query('api::prompt.prompt').findOne({
-  
-                  where: {
-  
-                    id: chatModel.config.prompt.id,
-                    type: 'chat'
-  
-                  },
-                  select: ['content'],
-                  populate: ['contextInputs']
-  
-                });
-  
-  
-                promtp = promtp.content.replace(/\\n/g, ' ').replace(/\\-/g, '-');
-                
-                
-  
-              }
-  
-              if(!promtp){
-  
-                promtp = chatModel.config.prompt.content.replace(/\n/g, " ");
-              }*/
-  
-  
-  
-  
               
               const promptTemplate = new PromptTemplate({
                 template: promtp,
@@ -467,7 +445,6 @@ module.exports = {
                 timeout: 45000,
                 topP: 1,
                 streaming: true,
-                //verbose: true,
                 callbackManager: CallbackManager.fromHandlers({
                   async handleLLMNewToken(token) {
   
@@ -479,9 +456,8 @@ module.exports = {
                   async handleLLMEnd(result) {
   
   
-                    socket.emit('messageEnd', { message: result , source : source, uuid : uuidv4() , sala: sala});
-  
-                    // si hay source mando el source
+                    socket.emit('messageEnd', { message: result , source : [], uuid : uuidv4() , sala: sala});
+
   
                     
                   }
@@ -537,7 +513,7 @@ module.exports = {
                   chat : sala,
                   content : response.text,
                   uuid : uuidv4(),
-                  metadata : source,
+                  metadata : [],
                 }
   
                 await SupabaseVectorStoreCustom.fromTexts([response.text], { source: 'ia' }, new OpenAIEmbeddings({ openAIApiKey: OPENAI_API_KEY }), dbConfig);
@@ -582,7 +558,23 @@ module.exports = {
         throw error;
       }
     });
-
+    function extractMentionData(htmlMessage, data_id = false) {
+      const mentionRegex = /<span class="mention"[^>]*title="([^"]*)"[^>]*data-id="([^"]*)"[^>]*>/g;
+      const matches = [...htmlMessage.matchAll(mentionRegex)];
+      
+      if (data_id) {
+        // Si data_id es verdadero, retorna solo un array de data-ids convertidos a enteros.
+        return matches.map(match => parseInt(match[2], 10));
+      } else {
+        // Retorna el objeto con title y dataId (convertido a entero) si data_id es falso.
+        return matches.map(match => ({
+          title: match[1],
+          dataId: parseInt(match[2], 10), // Convierte dataId a entero
+        }));
+      }
+    }
+    
+    
 
   },
 

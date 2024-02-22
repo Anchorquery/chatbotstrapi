@@ -306,28 +306,19 @@ module.exports = createCoreService('api::chat.chat', ({ strapi }) => ({
   // busco todos lo mensajes del chat con el limit y los ordeno por fecha
 
   const mensajes = await strapi.db.query('api::message.message').findMany({
-
     where: {
-
       chat: chat.id,
+      sender: {
+        in: ['user', 'ia']
+      }
     },
     limit: limit
   });
+  
 
 
   const memoria = [];
 
-
-
- /* if (chat.config && chat.config.content) {
-
-    memoria.push(new AIMessage({
-      content: chat.config.content,
-      name: "IA BOT",
-
-    }));
-
- }*/
 
 
  // @ts-ignore
@@ -408,7 +399,7 @@ async prepararMemoriaVector(idUser, message, match_count, sala ) {
 },
 
 // @ts-ignore
-async getMatchesFromEmbeddings ( creator, message, match_count,client = null,grupo_incrustacion = null) {
+async getMatchesFromEmbeddings ( creator, message, match_count,client = null,mentions=[],grupo_incrustacion = null) {
 
   try {
     
@@ -416,19 +407,39 @@ async getMatchesFromEmbeddings ( creator, message, match_count,client = null,gru
       modelName: "text-embedding-ada-002"
     });
 
-    const embeddings = await embedder.embedQuery(message);
-
     
 
-    const {data} = await clientS.rpc('query_documents', {
-      query_embedding: embeddings,
-      match_threshold: 0.78,
-      match_count:match_count, 
-      client : client ? client : null,
-      //creator : creator ? creator : null,
-      creator : null,
-      grupo_incrustacion : null,
-    });
+
+    if(mentions.length>0){
+      message = obtenerTituloDelDocumento(message);
+      console.log(message)
+      const embeddings = await embedder.embedQuery(message);
+      
+      var {data} = await clientS.rpc('match_documents_mentions', {
+        query_embedding: embeddings,
+        match_threshold: 0.78,
+        match_count:10, 
+        client : client ? client : null,
+        creator : creator ? creator : null,
+        grupo_incrustacion : mentions.length ? mentions :null,
+      });
+
+
+    }else
+    {
+      const embeddings = await embedder.embedQuery(message);
+
+      var {data} = await clientS.rpc('query_documents', {
+        query_embedding: embeddings,
+        match_threshold: 0.78,
+        match_count:match_count, 
+        client : client ? client : null,
+        //creator : creator ? creator : null,
+        grupo_incrustacion : mentions.length ? mentions :null,
+      });
+    }
+
+
 
     return data;
 
@@ -441,4 +452,18 @@ async getMatchesFromEmbeddings ( creator, message, match_count,client = null,gru
 
 }
 }));
+
+function obtenerTituloDelDocumento(mensaje) {
+  // Utilizamos una expresión regular para encontrar el título del documento dentro del mensaje
+  const regex = /<span class="mention" .*? title="(.*?)".*?>(.*?)<\/span>/;
+  const match = mensaje.match(regex);
+  
+  if (match) {
+      // El título del documento se encuentra en el grupo de captura número 1
+      const titulo = match[1];
+      return `DOCUMENT NAME: ${titulo}`;
+  } else {
+      return mensaje;
+  }
+}
 

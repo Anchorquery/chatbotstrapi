@@ -42,7 +42,8 @@
       "type": "enumeration",
       "enum": [
         "user",
-        "ia"
+        "ia",
+        "info"
       ],
       "default": "user"
     },

@@ -6,6 +6,11 @@ module.exports = {
 			handler: 'document-file.createFolder',
 			prefix : ''
 		},
-
+		{
+			method: 'GET', 
+			path: '/find-infobase',
+			handler: 'document-file.findInfobase',
+			prefix : ''
+		},
 	]
 }

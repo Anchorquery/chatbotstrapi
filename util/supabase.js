@@ -62,6 +62,7 @@ module.exports = class SupabaseVectorStoreCustom extends VectorStore {
      * @returns A promise that resolves when the documents have been added.
      */
     async addDocuments(documents, options) {
+        console.log(documents)
         const texts = documents.map(({ pageContent }) => pageContent);
         return this.addVectors(await this.embeddings.embedDocuments(texts), documents, options);
     }
@@ -109,6 +110,7 @@ module.exports = class SupabaseVectorStoreCustom extends VectorStore {
                 created_by_id: options.creator,
                 updated_by_id: options.creator,
                 grupo_incrustacion: options.grupoIncrustacion,
+                
             }));
 
         }
@@ -304,6 +306,7 @@ module.exports = class SupabaseVectorStoreCustom extends VectorStore {
      * @returns A promise that resolves with a new SupabaseVectorStore instance when the instance has been created.
      */
     static async fromDocuments(docs, embeddings, dbConfig) {
+
         const instance = new this(embeddings, dbConfig);
         await instance.addDocuments(docs, dbConfig.extraData);
         return instance;

@@ -18,6 +18,14 @@ module.exports = {
 							middlewares: [],
 					},
 			},
-
+			{
+				method: "POST",
+				path: "/document/fileEmbadding",
+				handler: "custom.uploadFileEmbadding",
+				config: {
+						policies: [],
+						middlewares: [],
+				},
+		},
 	],
 };

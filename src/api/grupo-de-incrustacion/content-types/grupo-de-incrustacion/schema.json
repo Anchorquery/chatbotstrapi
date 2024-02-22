@@ -73,6 +73,10 @@
     "isQueue": {
       "type": "boolean",
       "default": false
+    },
+    "infobase": {
+      "type": "boolean",
+      "default": false
     }
   }
 }
