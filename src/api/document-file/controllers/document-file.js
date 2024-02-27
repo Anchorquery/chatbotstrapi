@@ -127,7 +127,7 @@ module.exports = createCoreController('api::document-file.document-file', ({ str
 
 		if (!id) return ctx.badRequest("id is required");
 
-		console.log(id);
+		strapi.log.debug(id);
 
 		// verifico exista el documento y pertenezca al usuario
 
@@ -185,7 +185,7 @@ module.exports = createCoreController('api::document-file.document-file', ({ str
 
 		let { name, parentFolder, description, type, client } = ctx.request.body.data;
 
-console.log(ctx.request.body.data);
+strapi.log.debug(ctx.request.body.data);
 		type = type || 'default';
 
 		if (!name) return ctx.badRequest("name is required");
@@ -249,7 +249,7 @@ console.log(ctx.request.body.data);
 
 			if (!folderR) return ctx.badRequest("folder not found or not belong to user");
 
-			console.log(folderR);
+			strapi.log.debug(folderR);
 
 			data.parent = folderR.id;
 
@@ -415,7 +415,7 @@ console.log(ctx.request.body.data);
 				client:true
 			}
 		});
-		console.log(document)
+		strapi.log.debug(document)
 		if(document.isFolder && document.client){
 
 			//debo borrar el cliente

@@ -58,7 +58,7 @@ module.exports = createCoreController('api::document.document', ({ strapi }) => 
 
     return ctx.send({ message: 'Su archivo ha sido subido, se le informará cuando esté disponible para ser usado' });
   } catch (error) {
-    console.log(error);
+    strapi.log.debug(error);
     ctx.badRequest('Error processing request', { message: error.message });
   }
 },
@@ -112,7 +112,7 @@ async obtenerOcrearGrupoIncrustacion(clienteEmpresa, nombreFile, user) {
 
 async construirEntidadArchivo(file, grupoIncrustacion, fileNameNoExt) {
   let buffer = await fs.promises.readFile(file.path);
-  console.log("grupoIncrustacion",grupoIncrustacion)
+  strapi.log.debug("grupoIncrustacion",grupoIncrustacion)
   const tmpWorkingDirectory = await fse.mkdtemp(path.join(os.tmpdir(), 'strapi-upload-'));
   
   return {
@@ -143,13 +143,13 @@ async procesarYSubirDocumento(grupoIncrustacion,nombreFile, file, clienteEmpresa
       );
 
 
-      console.log("grupoIncrustacion al llamar la funcion",grupoIncrustacion)
+      strapi.log.debug("grupoIncrustacion al llamar la funcion",grupoIncrustacion)
   
   
     documentQueue.addDocumentToQueue( { infobase:true,nombreFile,clienteEmpresa,user, grupoIncrustacion, file } );
   } catch (error) {
 
-    console.log(error)
+    strapi.log.debug(error)
     return error.message ;
 
     

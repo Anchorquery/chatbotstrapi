@@ -61,7 +61,7 @@ module.exports = ({ strapi }) => ({
 			return docs;
 		} catch (err) {
 
-			console.log(err.message);
+			strapi.log.debug(err.message);
 
 			throw new Error(err.message);
 

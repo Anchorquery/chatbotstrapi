@@ -92,7 +92,7 @@ async function getResponse(session, input) {
 
 
   } catch (error) {
-    // console.log(error)
+    // strapi.log.debug(error)
     throw new Error(error.message);
   }
 
@@ -391,7 +391,7 @@ async prepararMemoriaVector(idUser, message, match_count, sala ) {
 
     
   } catch (error) {
-    console.log(error)
+    strapi.log.debug(error)
    /// throw new Error(`Error querying embeddings: ${error}`);
   }
 
@@ -412,7 +412,7 @@ async getMatchesFromEmbeddings ( creator, message, match_count,client = null,men
 
     if(mentions.length>0){
       message = obtenerTituloDelDocumento(message);
-      console.log(message)
+      strapi.log.debug(message)
       const embeddings = await embedder.embedQuery(message);
       
       var {data} = await clientS.rpc('match_documents_mentions', {
@@ -445,7 +445,7 @@ async getMatchesFromEmbeddings ( creator, message, match_count,client = null,men
 
     
   } catch (error) {
-    console.log(error)
+    strapi.log.debug(error)
     throw new Error(`Error querying embeddings: ${error}`);
   }
 

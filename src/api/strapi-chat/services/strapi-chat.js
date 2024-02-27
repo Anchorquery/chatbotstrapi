@@ -76,7 +76,7 @@ async function getResponse(session, input) {
 
     
   } catch (error) {
-   // console.log(error)
+   // strapi.log.debug(error)
     throw new Error(error.message); 
   }
 

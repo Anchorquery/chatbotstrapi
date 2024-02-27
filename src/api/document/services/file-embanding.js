@@ -74,7 +74,7 @@ module.exports = ({ strapi }) => ({
 
 				}	else {
 
-					console.log('Formato no soportado');
+					strapi.log.debug('Formato no soportado');
 
 					throw	new Error('Formato no soportado');
 
@@ -89,7 +89,7 @@ module.exports = ({ strapi }) => ({
 	
 			return docs;
 		}	catch (err) {
-			console.log(err.message);
+			strapi.log.debug(err.message);
 			throw new Error(err.message);
 		}
 
@@ -107,7 +107,7 @@ module.exports = ({ strapi }) => ({
 	
 			return vectorstores;
 		} catch (error) {
-			console.log(error);
+			strapi.log.debug(error);
 			throw new Error(error.message || error);
 		}
 
