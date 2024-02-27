@@ -39,7 +39,7 @@ class SiteMapLoader {
 					return	url;
 
 				} catch (err) {
-						console.log(err);
+						strapi.log.debug(err);
 				}
 		}
 

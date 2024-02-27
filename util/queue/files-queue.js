@@ -44,7 +44,7 @@ class DocumentQueue {
 				try {
 					this.initializeQueue();
 				} catch (error) {
-						console.log(error)
+						strapi.log.debug(error)
 				}	
     
   }
@@ -62,21 +62,21 @@ class DocumentQueue {
   }
 
 		async onWaiting(jobId) {
-			console.log(`A job with ID ${jobId} is waiting`);
+			strapi.log.debug(`A job with ID ${jobId} is waiting`);
 			await this.updateGroupIncrustation('waiting', true);
 			this.emitMessageTask('waiting', `Tarea en espera`);
 			
 	}
 
 	async onActive(job) {
-			console.log(`A job with ID ${job.id} is active`);
+			strapi.log.debug(`A job with ID ${job.id} is active`);
 			await this.updateGroupIncrustation('active', true);
 			this.emitMessageTask('active', `Tarea en proceso`);
 			
 	}
 
 	async onCompleted(job,result) {
-			console.log(`A job with ID ${job.id} has been completed`,result);
+			strapi.log.debug(`A job with ID ${job.id} has been completed`,result);
 			
 			await this.updateGroupIncrustation('completed', false);
 			this.emitMessageTask('completed', `Tarea completada`);
@@ -85,17 +85,17 @@ class DocumentQueue {
 
 	async onFailed(job, err) {
 
-			console.log(`A job with ID ${job.id} has failed with ${err.message}`);
+			strapi.log.debug(`A job with ID ${job.id} has failed with ${err.message}`);
 			await this.queue.close();
 	}
 
 	async onError(error) {
-			console.log(`Queue error: ${error}`);
+			strapi.log.debug(`Queue error: ${error}`);
 			await this.queue.close();
 	}
 
 	async onRemoved(job) {
-			console.log(`Job ${job.id} has been removed.`);
+			strapi.log.debug(`Job ${job.id} has been removed.`);
 	}
 
 	onProgress(job, progress) {
@@ -133,7 +133,7 @@ class DocumentQueue {
 	
 
 let docs =  await this.createDocumt(nombreFile, file, textSplitter, clienteEmpresa ? clienteEmpresa.nombre  : null)
-				console.log("GRUPO D EINCRUSTACION",this.groupIncrust)
+				strapi.log.debug("GRUPO D EINCRUSTACION",this.groupIncrust)
 					let extraData = {
 							custom: true,
 							client: clienteEmpresa ? clienteEmpresa.id : null,
@@ -246,7 +246,7 @@ let docs =  await this.createDocumt(nombreFile, file, textSplitter, clienteEmpre
 
 			} else {
 
-				console.log('Formato no soportado');
+				strapi.log.debug('Formato no soportado');
 
 				throw new Error('Formato no soportado');
 
@@ -280,7 +280,7 @@ let docs =  await this.createDocumt(nombreFile, file, textSplitter, clienteEmpre
 			return docs;
 
 		} catch (error) {
-			console.log(error);
+			strapi.log.debug(error);
 		}
 
 

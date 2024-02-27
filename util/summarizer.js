@@ -37,7 +37,7 @@ const chunkSubstr = (str, size) => {
 };
 
 const summarize = async ({ document, inquiry, onSummaryDone }) => {
-  console.log("summarizing ", document.length);
+  strapi.log.debug("summarizing ", document.length);
   const promptTemplate = new PromptTemplate({
     template: inquiry ? summarizerTemplate : summarizerDocumentTemplate,
     inputVariables: inquiry ? ["document", "inquiry"] : ["document"],
@@ -54,12 +54,12 @@ const summarize = async ({ document, inquiry, onSummaryDone }) => {
       inquiry
     });
 
-    console.log(result);
+    strapi.log.debug(result);
 
     onSummaryDone && onSummaryDone(result.text);
     return result.text;
   } catch (e) {
-    console.log(e);
+    strapi.log.debug(e);
   }
 };
 
@@ -67,18 +67,18 @@ const rateLimitedSummarize = limiter.wrap(summarize);
 
 const summarizeLongDocument = async ({ document, inquiry, onSummaryDone, forceSummarize =false }) => {
   if(forceSummarize ) {
-			console.log("FORZADO", limitCharacteerLength);
+			strapi.log.debug("FORZADO", limitCharacteerLength);
 			limitCharacteerLength = 0;
 		}
   const templateLength = inquiry ? summarizerTemplate.length : summarizerDocumentTemplate.length;
   try {
     if ((document.length + templateLength) > limitCharacteerLength) {
-      console.log("document is long and has to be shortened", document.length);
-      console.log("templateLength", templateLength);
-      console.log("limitCharacteerLength", limitCharacteerLength);
-      console.log("templateLenght - limitCharacteerLength - 1", templateLength - limitCharacteerLength - 1);
+      strapi.log.debug("document is long and has to be shortened", document.length);
+      strapi.log.debug("templateLength", templateLength);
+      strapi.log.debug("limitCharacteerLength", limitCharacteerLength);
+      strapi.log.debug("templateLenght - limitCharacteerLength - 1", templateLength - limitCharacteerLength - 1);
       const chunks = chunkSubstr(document, limitCharacteerLength - templateLength - 1);
-      console.log("chunks", chunks.length);
+      strapi.log.debug("chunks", chunks.length);
       let summarizedChunks = [];
       summarizedChunks = await Promise.all(
         chunks.map(async (chunk) => {
@@ -98,10 +98,10 @@ const summarizeLongDocument = async ({ document, inquiry, onSummaryDone, forceSu
 
 
       if ((result.length + templateLength) > limitCharacteerLength) {
-        console.log("document is STILL long and has to be shortened further");
+        strapi.log.debug("document is STILL long and has to be shortened further");
         return await summarizeLongDocument({ document: result, inquiry, onSummaryDone, forceSummarize });
       } else {
-        console.log("done");
+        strapi.log.debug("done");
         return result;
       }
 

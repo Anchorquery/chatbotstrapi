@@ -15,7 +15,7 @@ let pinecone = null;
 
 const initPineconeClient = async () => {
   pinecone = new PineconeClient();
-  console.log("init pinecone");
+  strapi.log.debug("init pinecone");
   await pinecone.init({
     environment: process.env.PINECONE_ENVIRONMENT,
     apiKey: process.env.PINECONE_API_KEY,
@@ -88,8 +88,8 @@ module.exports = async function handler(req, res) {
 
   const getEmbedding = async (doc) => {
     const embedding = await embedder.embedQuery(doc.pageContent);
-    console.log(doc.pageContent);
-    console.log("got embedding", embedding.length);
+    strapi.log.debug(doc.pageContent);
+    strapi.log.debug("got embedding", embedding.length);
     process.stdout.write(`${Math.floor((counter / documents.flat().length) * 100)}%\r`);
     counter = counter + 1;
     return {
@@ -103,7 +103,7 @@ module.exports = async function handler(req, res) {
     };
   };
   process.stdout.write("100%\r");
-  console.log("done embedding");
+  strapi.log.debug("done embedding");
 
   let vectors = [];
 
@@ -111,7 +111,7 @@ module.exports = async function handler(req, res) {
 
     vectors = await Promise.all(documents.flat().map((doc) => limiter.wrap(doc)));
     const chunks = sliceIntoChunks(vectors, 10);
-    console.log(chunks.length);
+    strapi.log.debug(chunks.length);
 
     try {
       await Promise.all(chunks.map(async chunk => {
@@ -125,10 +125,10 @@ module.exports = async function handler(req, res) {
 
       res.status(200).json({ message: "Done" });
     } catch (e) {
-      console.log(e);
+      strapi.log.debug(e);
       res.status(500).json({ message: `Error ${JSON.stringify(e)}` });
     }
   } catch (e) {
-    console.log(e);
+    strapi.log.debug(e);
   }
 };
