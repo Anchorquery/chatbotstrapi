@@ -188,7 +188,7 @@ module.exports = createCoreController('api::document.document', ({ strapi }) => 
 			);
 		} catch (error) {
 			
-			 strapi.log.debug(error);
+			 console.log(error);
 		}
 
 
@@ -197,7 +197,7 @@ module.exports = createCoreController('api::document.document', ({ strapi }) => 
 		} catch (error) {
 
 		
-			strapi.log.debug(error)
+			console.log(error)
 
 		}
 
@@ -370,7 +370,7 @@ module.exports = createCoreController('api::document.document', ({ strapi }) => 
 
 
 		} catch (error) {
-			strapi.log.debug(error)
+			console.log(error)
 			// lanzo el error
 
 
@@ -383,7 +383,7 @@ module.exports = createCoreController('api::document.document', ({ strapi }) => 
 		try {
 
 			let loader = null;
-			strapi.log.debug(mode);
+			console.log(mode);
 			if (mode == 'cheerio') {
 
 				loader = new CheerioWebBaseLoader(url);
@@ -435,7 +435,7 @@ module.exports = createCoreController('api::document.document', ({ strapi }) => 
 			return docs;
 
 		} catch (error) {
-			strapi.log.debug(error);
+			console.log(error);
 		}
 
 	},
@@ -499,7 +499,7 @@ module.exports = createCoreController('api::document.document', ({ strapi }) => 
 
 			} else {
 
-				strapi.log.debug('Formato no soportado');
+				console.log('Formato no soportado');
 
 				throw new Error('Formato no soportado');
 
@@ -533,7 +533,7 @@ module.exports = createCoreController('api::document.document', ({ strapi }) => 
 			return docs;
 
 		} catch (error) {
-			strapi.log.debug(error);
+			console.log(error);
 		}
 
 

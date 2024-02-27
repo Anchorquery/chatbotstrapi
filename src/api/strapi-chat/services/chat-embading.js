@@ -46,14 +46,14 @@ makeChain: async (ctx) => {
 	const history = ctx.request.body.data.history;
 
 	const question	= ctx.request.body.data.message;
-strapi.log.debug(question);
-strapi.log.debug(ctx.request.body);
-	strapi.log.debug("2");
+console.log(question);
+console.log(ctx.request.body);
+	console.log("2");
 	const model = new OpenAI({
 		temperature: 1, // increase temepreature to get more creative answers
 		modelName: 'gpt-3.5-turbo', //change this to gpt-4 if you have access
   });
-		strapi.log.debug("3");
+		console.log("3");
 /*const vectorstore = await SupabaseVectorStore.fromExistingIndex(
 	embading,
 	dbConfig,
@@ -65,7 +65,7 @@ const vectorStore = await SupabaseVectorStore.fromExistingIndex(new OpenAIEmbedd
 
 
 })
-strapi.log.debug("4");
+console.log("4");
 
 const chain = await ConversationalRetrievalQAChain.fromLLM(
 	model,
@@ -76,14 +76,14 @@ const chain = await ConversationalRetrievalQAChain.fromLLM(
 			returnSourceDocuments: true, //The number of source documents returned is 4 by default
 	},
 );
-strapi.log.debug("5");
+console.log("5");
 
 const response = await chain.call({
 	question: question,
 	chat_history:  [],
 });
 
-strapi.log.debug(response);
+console.log(response);
 
 return response;
 

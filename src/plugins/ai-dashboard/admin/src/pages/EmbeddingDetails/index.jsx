@@ -123,7 +123,7 @@ export default function EmbeddingDetails() {
 
   const embeddings = ensureParsedJSON(data.embeddings);
   const metadata = embeddings && embeddings[0].metadata;
-  strapi.log.debug("metadata", metadata);
+  console.log("metadata", metadata);
 
   return (
     <ContentLayout>

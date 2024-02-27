@@ -27,8 +27,8 @@ module.exports = {
 
 
     } catch (err) {
-      strapi.log.debug(err);
-      strapi.log.debug(err.message);
+      console.log(err);
+      console.log(err.message);
       throw new Error(err.message);
     }
   },
@@ -46,7 +46,7 @@ module.exports = {
 
       ctx.body = { data: response };
     } catch (err) {
-      strapi.log.debug(err.message);
+      console.log(err.message);
       throw new Error(err.message);
     }
   },
@@ -58,7 +58,7 @@ module.exports = {
         .deleteSessionById(ctx);
       ctx.body = { data: response };
     } catch (err) {
-      strapi.log.debug(err.message);
+      console.log(err.message);
       throw new Error(err.message);
     }
   },
@@ -71,7 +71,7 @@ module.exports = {
 
       ctx.body = { data: response };
     } catch (err) {
-      strapi.log.debug(err.message);
+      console.log(err.message);
       throw new Error(err.message);
     }
   },
@@ -84,7 +84,7 @@ module.exports = {
 
       ctx.body = { data: response };
     } catch (err) {
-      strapi.log.debug(err.message);
+      console.log(err.message);
       throw new Error(err.message);
     }
   },
@@ -95,7 +95,7 @@ module.exports = {
     for (const key in files) {
      
       const file = files[key];
-     // strapi.log.debug("file dentro",file);
+     // console.log("file dentro",file);
       const { path, name, type } = file;
 
       // Generar un nombre único utilizando uuidv4
@@ -139,7 +139,7 @@ module.exports = {
 
         //await fs.promises.unlink(path);
 
-        strapi.log.debug(`Archivo guardado: ${uploadPath}`);
+        console.log(`Archivo guardado: ${uploadPath}`);
       } catch (error) {
         console.error(`error : ${error}`);
         console.error(`Error al guardar el archivo: ${uploadPath}`);
@@ -167,7 +167,7 @@ module.exports = {
       ctx.body = { ok: true };
 
     } catch (err) {
-      strapi.log.debug(err.message);
+      console.log(err.message);
       throw new Error(err.message);
     }
   }

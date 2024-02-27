@@ -30,7 +30,7 @@ const config = {
 };
 
 const bootstrap = (app) => {
-  strapi.log.debug(app);
+  console.log(app);
 };
 
 export default {

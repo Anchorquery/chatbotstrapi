@@ -38,7 +38,7 @@ module.exports = createCoreController('api::prompt.prompt', ({ strapi }) => ({
 		if (!user) return ctx.unauthorized("Unauthorized");
 
 
-strapi.log.debug({
+console.log({
 	_type,
 	_tema,
 	_actividad

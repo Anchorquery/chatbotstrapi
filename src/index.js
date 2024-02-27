@@ -101,7 +101,7 @@ module.exports = {
           } catch (error) {
 
 
-            strapi.log.debug(error)
+            console.log(error)
 
           }
 
@@ -201,7 +201,7 @@ module.exports = {
 
               let mentions = extractMentionData(message,true);
               
-              strapi.log.debug(mentions)
+              console.log(mentions)
              
   
   
@@ -310,7 +310,7 @@ module.exports = {
              /* const source = matches && Array.from(
                 matches.reduce((map, match) => {
                   const metadata = match.metadata || {};
-                  strapi.log.debug(metadata)
+                  console.log(metadata)
                   const { source } = metadata;
                   if (match.type === 'file') {
                     const url = source.split('uploads')[1];
@@ -334,7 +334,7 @@ module.exports = {
                   let url = null;
                   let normalizedUrl = null;
                   if (match.type === 'file') {
-                    strapi.log.debug(url)
+                    console.log(url)
                      url = source.split('uploads')[1];
                      normalizedUrl = path.normalize('/uploads' + url); 
 
@@ -519,7 +519,7 @@ module.exports = {
                 await SupabaseVectorStoreCustom.fromTexts([response.text], { source: 'ia' }, new OpenAIEmbeddings({ openAIApiKey: OPENAI_API_KEY }), dbConfig);
             } catch (error) {
               strapi.io.emit('error', { message: 'Ha ocurrido un error en el servidor', error: error });
-              strapi.log.debug(error)
+              console.log(error)
 
               // lanzo el error
 
@@ -532,7 +532,7 @@ module.exports = {
 
 
           socket.on('disconnect', async (socket) => {
-            strapi.log.debug(`Cliente ${socket.id} se ha desconectado`);
+            console.log(`Cliente ${socket.id} se ha desconectado`);
 
          
             
@@ -554,7 +554,7 @@ module.exports = {
 
         strapi.io.emit('error', { message: 'Ha ocurrido un error en el servidor', error: error });
 
-        strapi.log.debug(error)
+        console.log(error)
         throw error;
       }
     });

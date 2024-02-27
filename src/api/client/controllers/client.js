@@ -50,7 +50,7 @@ module.exports = createCoreController('api::client.client' , ({ strapi }) => ({
 
 			if (!folderR) return ctx.badRequest("folder not found or not belong to user");
 
-			strapi.log.debug(folderR);
+			console.log(folderR);
 
 			folder = folderR.id;
 

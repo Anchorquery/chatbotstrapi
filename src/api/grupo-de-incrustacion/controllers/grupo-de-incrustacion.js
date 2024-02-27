@@ -11,7 +11,7 @@ module.exports = createCoreController('api::grupo-de-incrustacion.grupo-de-incru
 	async delete(ctx) {
 
 
-		strapi.log.debug(ctx.params)
+		console.log(ctx.params)
 
 		const { id } = ctx.params;
 		if (!id) return ctx.badRequest("Chat is required", { error: "Chat is required" });
@@ -42,7 +42,7 @@ module.exports = createCoreController('api::grupo-de-incrustacion.grupo-de-incru
 			}
 		});
 
-		strapi.log.debug(count);
+		console.log(count);
 
 		return ctx.send({
 			count: count,
