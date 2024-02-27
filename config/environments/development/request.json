@@ -1,0 +1,8 @@
+{
+	"logger": {
+		"level": "debug",
+		"exposeInContext": true,
+		"requests": true,
+			"file": "./logs/strapi-debug.log"
+	}
+}
