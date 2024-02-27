@@ -117,7 +117,7 @@ module.exports = createCoreController('api::chat.chat', ({ strapi }) => ({
 		const {prompt , type, tone, language,temperature} = ctx.request.body.data;
 
 
-		console.log(	{prompt , type, tone, language,temperature});
+		strapi.log.debug(	{prompt , type, tone, language,temperature});
 
 
 
