@@ -9,7 +9,7 @@ module.exports = {
     new winston.transports.Console({
       level: 'silly', // Ajusta para capturar desde debug
       format: winston.format.combine(
-        levelFilter('debug'), // Usa 'debug' para permitir todo desde debug en adelante
+        levelFilter('silly'), // Usa 'debug' para permitir todo desde debug en adelante
         prettyPrint({ timestamps: 'YYYY-MM-DD hh:mm:ss.SSS' })
       ),
     }),
@@ -18,7 +18,7 @@ module.exports = {
       filename: path.join(__dirname, '..', 'logs', 'strapi.log'),
       level: 'silly', // Ajusta para capturar desde debug
       format: winston.format.combine(
-        levelFilter('debug'), // Asegura que el archivo también capture desde debug
+        levelFilter('silly'), // Asegura que el archivo también capture desde debug
         prettyPrint({ timestamps: 'YYYY-MM-DD hh:mm:ss.SSS' })
       ),
     })
