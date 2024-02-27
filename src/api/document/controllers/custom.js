@@ -21,6 +21,8 @@ module.exports = createCoreController('api::document.document', ({ strapi }) => 
 
     const file = ctx.request.files?.files;
 
+    let nombreFile  =ctx.request.body.name;
+
 
     if (!file) return ctx.badRequest("File required", { message: 'File required' });
 
@@ -31,7 +33,7 @@ module.exports = createCoreController('api::document.document', ({ strapi }) => 
 
 
 
-    let nombreFile = await this.limpiarNombreArchivo(file.name);
+    nombreFile = nombreFile ? nombreFile :  await this.limpiarNombreArchivo(file.name);
     let grupoIncrustacion = await this.obtenerOcrearGrupoIncrustacion(clienteEmpresa, nombreFile, ctx.state.user);
 
     let fileNameNoExt = uuid() + '_' + nombreFile;
@@ -40,7 +42,7 @@ module.exports = createCoreController('api::document.document', ({ strapi }) => 
     await strapi.plugin('upload').service('upload').uploadFileAndPersist(entity);
 
     const imagenIN = await strapi.query("plugin::upload.file").create({ data: entity });
-    await this.procesarYSubirDocumento(grupoIncrustacion.id,nombreFile, imagenIN, clienteEmpresa, ctx.state.user);
+    this.procesarYSubirDocumento(grupoIncrustacion.id,nombreFile, imagenIN, clienteEmpresa, ctx.state.user);
 
      await strapi.db.query('api::message.message').create({
       data : {
@@ -69,7 +71,18 @@ async buscarCliente(clientUUID) {
 },
 
 async limpiarNombreArchivo(nombreArchivo) {
-  return nombreArchivo.split('.')[0].trim().replace(/[*+~.()'"!:@]/g, '').replace(/[_-]/g, ' ');
+  // Separa la base del nombre del archivo de su extensión usando el último punto.
+  const partes = nombreArchivo.split('.');
+  const extension = partes.pop(); // Remueve y guarda la extensión (último elemento).
+  const nombreBase = partes.join('.'); // Une de nuevo las partes restantes, en caso de que hubiera más de un punto.
+
+  // Limpia el nombre base del archivo: quita espacios en blanco al inicio y al final, y remueve caracteres especiales.
+  const nombreLimpio = nombreBase.trim().replace(/[*+~.()'"!:@]/g, '').replace(/[_-]/g, ' ');
+
+  // Opcional: Si deseas conservar la extensión, puedes concatenarla de nuevo aquí.
+  // return `${nombreLimpio}.${extension}`;
+
+  return nombreLimpio; // Retorna el nombre base limpio sin la extensión.
 },
 
 async obtenerOcrearGrupoIncrustacion(clienteEmpresa, nombreFile, user) {
@@ -128,11 +141,18 @@ async procesarYSubirDocumento(grupoIncrustacion,nombreFile, file, clienteEmpresa
     const documentQueue = new DocumentQueue(
       user,grupoIncrustacion
       );
+
+
+      console.log("grupoIncrustacion al llamar la funcion",grupoIncrustacion)
   
   
     documentQueue.addDocumentToQueue( { infobase:true,nombreFile,clienteEmpresa,user, grupoIncrustacion, file } );
   } catch (error) {
+
     console.log(error)
+    return error.message ;
+
+    
   }
 
 

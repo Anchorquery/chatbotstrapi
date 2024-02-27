@@ -3,17 +3,17 @@
 const { OpenAIEmbeddings } = require('langchain/embeddings/openai');
 const SupabaseVectorStoreCustom = require('../supabase.js');
 const clientS = require('../../util/superbase-client.js');
-const Promise = require('bluebird');
 const { RecursiveCharacterTextSplitter } = require('langchain/text_splitter');
 const path = require('path');
 const { CSVLoader } = require('langchain/document_loaders/fs/csv');
 const { DocxLoader } = require('langchain/document_loaders/fs/docx');
 const { PDFLoader } = require('langchain/document_loaders/fs/pdf');
 const { TextLoader } = require('langchain/document_loaders/fs/text');
-const fs = Promise.promisifyAll(require('fs'));
+
+const {REDIS_PASSWORD, REDIS_HOST,REDIS_PORT,REDIS_DB} = process.env;
 const textSplitter = new RecursiveCharacterTextSplitter({
-	chunkSize: 1000,
-	chunkOverlap:200,
+	chunkSize: 2000,
+	chunkOverlap:100,
 });
 const embading = new OpenAIEmbeddings(
 
@@ -35,14 +35,18 @@ class DocumentQueue {
     this.user = user;
     this.groupIncrust = groupIncrust;
     this.queue = new Queue('document-file-queue', {
-      redis: process.env.REDIS_URL,
+      redis: `redis://:${REDIS_PASSWORD}@${REDIS_HOST}:${REDIS_PORT}${REDIS_DB}`,
       limiter: {
         max: 2,
         duration: 1000,
       },
     });
-
-    this.initializeQueue();
+				try {
+					this.initializeQueue();
+				} catch (error) {
+						console.log(error)
+				}	
+    
   }
 
   initializeQueue() {
@@ -50,39 +54,47 @@ class DocumentQueue {
 
    this.queue.on('waiting', (jobId) => this.onWaiting(jobId));
     this.queue.on('active', (job, jobPromise) => this.onActive(job));
-    this.queue.on('completed', (job, result) => this.onCompleted(job));
+    this.queue.on('completed', (job, result) => this.onCompleted(job,result));
     this.queue.on('failed', (job, err) => this.onFailed(job, err));
     this.queue.on('error', (error) => this.onError(error));
     this.queue.on('removed', (job) => this.onRemoved(job));
     this.queue.on('progress', (job, progress) => this.onProgress(job, progress));
   }
 
-		onWaiting(jobId) {
+		async onWaiting(jobId) {
+			console.log(`A job with ID ${jobId} is waiting`);
+			await this.updateGroupIncrustation('waiting', true);
 			this.emitMessageTask('waiting', `Tarea en espera`);
-			this.updateGroupIncrustation('waiting', true);
+			
 	}
 
-	onActive(job) {
+	async onActive(job) {
 			console.log(`A job with ID ${job.id} is active`);
+			await this.updateGroupIncrustation('active', true);
 			this.emitMessageTask('active', `Tarea en proceso`);
-			this.updateGroupIncrustation('active', true);
+			
 	}
 
-	onCompleted(job) {
-			console.log(`A job with ID ${job.id} has been completed`);
+	async onCompleted(job,result) {
+			console.log(`A job with ID ${job.id} has been completed`,result);
+			
+			await this.updateGroupIncrustation('completed', false);
 			this.emitMessageTask('completed', `Tarea completada`);
-			this.updateGroupIncrustation('completed', false);
+			await this.queue.close();
 	}
 
-	onFailed(job, err) {
+	async onFailed(job, err) {
+
 			console.log(`A job with ID ${job.id} has failed with ${err.message}`);
+			await this.queue.close();
 	}
 
-	onError(error) {
+	async onError(error) {
 			console.log(`Queue error: ${error}`);
+			await this.queue.close();
 	}
 
-	onRemoved(job) {
+	async onRemoved(job) {
 			console.log(`Job ${job.id} has been removed.`);
 	}
 
@@ -121,7 +133,7 @@ class DocumentQueue {
 	
 
 let docs =  await this.createDocumt(nombreFile, file, textSplitter, clienteEmpresa ? clienteEmpresa.nombre  : null)
-				console.log(this.groupIncrust)
+				console.log("GRUPO D EINCRUSTACION",this.groupIncrust)
 					let extraData = {
 							custom: true,
 							client: clienteEmpresa ? clienteEmpresa.id : null,
@@ -138,6 +150,8 @@ let docs =  await this.createDocumt(nombreFile, file, textSplitter, clienteEmpre
 			} catch (error) {
 					console.error('Error processing document:', error.message);
 					job.moveToFailed({ message: 'job failed' });
+						throw error.message;
+					
 			}
 	}
 	

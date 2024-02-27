@@ -15,26 +15,48 @@ module.exports = createCoreController('api::grupo-de-incrustacion.grupo-de-incru
 
 		if (!user) return ctx.unauthorized("Unauthorized");
 
-		let { _limit, _page, _sort, _q, _where, _client ,_isMe } = ctx.query;
+		let { _limit, _page, _sort, _q, _where, _client, _isMe, _type } = ctx.query;
 
-		 _limit = _limit ? parseInt(_limit) : 10;
-			_page = _page ? parseInt(_page) : 1;
-			_sort = _sort ? _sort : 'createdAt:desc';
-			_q = _q ? _q : '';
+	
 
-		// busco los grupo de inscrustaciones
+		_limit = _limit ? parseInt(_limit) : 10;
+		_page = _page ? parseInt(_page) : 1;
+		_sort = _sort ? _sort : 'createdAt:desc';
+		_q = _q ? _q : '';
+		
 
-		const _offset =  (_page - 1) * _limit;			
-			let _items = await strapi.db.query("api::grupo-de-incrustacion.grupo-de-incrustacion").findWithCount({
-				limit:_limit,
+		let where = {
+				infobase: true,
+				queueState: "completed"
+		};
+		console.log(_client)
+		if (_client !== null && _client !== undefined && _client !== "null" && _client) {
+				where.client = _client;
+		}
+		if (_type !== null && _type !== undefined && _type !== "null" && _type) {
+			where.type = _type;
+	}
+
+		if(_isMe){
+				where.create = user.id;
+		}
+
+		if(_q){
+			where.title={
+				$containsi:_q
+			}
+		}
+		
+		const _offset = (_page - 1) * _limit;
+		
+		// Realiza la consulta con las condiciones acumuladas en 'where'
+		let _items = await strapi.db.query("api::grupo-de-incrustacion.grupo-de-incrustacion").findWithCount({
+				limit: _limit,
 				offset: _offset,
-				where: {
-					create: user.id ,
-					infobase:true,
-					queueState:"completed"
-				},
-				populate:["media","client", "create"]
-			});
+				where: where,
+				populate: ["media", "client", "create"]
+		});
+		
 
 
 

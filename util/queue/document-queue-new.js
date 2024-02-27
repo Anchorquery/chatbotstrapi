@@ -15,6 +15,7 @@ const textSplitter = new RecursiveCharacterTextSplitter({
 	chunkSize: 1000,
 	chunkOverlap:200,
 });
+const {REDIS_PASSWORD, REDIS_HOST,REDIS_PORT,REDIS_DB} = process.env;
 const embading = new OpenAIEmbeddings(
 
 	{
@@ -35,7 +36,7 @@ class DocumentSitemapQueue {
     this.user = user;
     this.groupIncrust = groupIncrust;
     this.queue = new Queue('document-queue', {
-      redis: process.env.REDIS_URL,
+					redis: `redis://:${REDIS_PASSWORD}@${REDIS_HOST}:${REDIS_PORT}${REDIS_DB}`,
       limiter: {
         max: 2,
         duration: 1000,

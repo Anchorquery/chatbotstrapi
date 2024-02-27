@@ -62,7 +62,7 @@ module.exports = class SupabaseVectorStoreCustom extends VectorStore {
      * @returns A promise that resolves when the documents have been added.
      */
     async addDocuments(documents, options) {
-        console.log(documents)
+        
         const texts = documents.map(({ pageContent }) => pageContent);
         return this.addVectors(await this.embeddings.embedDocuments(texts), documents, options);
     }
@@ -126,8 +126,7 @@ module.exports = class SupabaseVectorStoreCustom extends VectorStore {
             }));
         }
 
-        console.log('rows', rows);
-
+       
 
         // upsert returns 500/502/504 (yes really any of them) if given too many rows/characters
         // ~2000 trips it, but my data is probably smaller than average pageContent and metadata
@@ -285,7 +284,7 @@ module.exports = class SupabaseVectorStoreCustom extends VectorStore {
      * @returns A promise that resolves with a new SupabaseVectorStore instance when the instance has been created.
      */
     static async fromTexts(texts, metadatas, embeddings, dbConfig) {
-        console.log('fromTexts');
+    
         const docs = [];
         for (let i = 0; i < texts.length; i += 1) {
             const metadata = Array.isArray(metadatas) ? metadatas[i] : metadatas;
@@ -295,7 +294,7 @@ module.exports = class SupabaseVectorStoreCustom extends VectorStore {
             });
             docs.push(newDoc);
         }
-        console.log('fromTexts');
+       
         return SupabaseVectorStoreCustom.fromDocuments(docs, embeddings, dbConfig);
     }
     /**
