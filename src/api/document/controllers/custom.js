@@ -142,8 +142,9 @@ async procesarYSubirDocumento(grupoIncrustacion,nombreFile, file, clienteEmpresa
       user,grupoIncrustacion
       );
 
-
-      strapi.log.debug("grupoIncrustacion al llamar la funcion",grupoIncrustacion)
+      strapi.log.debug(documentQueue)
+      strapi.log.debug("grupoIncrustacion al llamar la funcion")
+      strapi.log.debug(grupoIncrustacion)
   
   
     documentQueue.addDocumentToQueue( { infobase:true,nombreFile,clienteEmpresa,user, grupoIncrustacion, file } );
