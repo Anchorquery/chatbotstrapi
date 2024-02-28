@@ -37,7 +37,11 @@ class DocumentSitemapQueue {
     this.user = user;
     this.groupIncrust = groupIncrust;
     this.queue = new Queue('document-queue', {
-					redis: `redis://:${REDIS_PASSWORD}@${REDIS_HOST}:${REDIS_PORT}${REDIS_DB}`,
+					redis: {
+						host: REDIS_HOST,
+						port: 6379,
+						password: REDIS_PASSWORD,
+					},
       limiter: {
         max: 2,
         duration: 1000,

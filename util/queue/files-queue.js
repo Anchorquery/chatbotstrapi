@@ -35,7 +35,11 @@ class DocumentQueue {
     this.user = user;
     this.groupIncrust = groupIncrust;
     this.queue = new Queue('document-file-queue', {
-      redis: `redis://:${REDIS_PASSWORD}@${REDIS_HOST}:${REDIS_PORT}${REDIS_DB}`,
+      redis: {
+							host: REDIS_HOST,
+    			port: 6379,
+							password: REDIS_PASSWORD,
+						},
       limiter: {
         max: 2,
         duration: 1000,
@@ -44,7 +48,7 @@ class DocumentQueue {
 				try {
 					this.initializeQueue();
 				} catch (error) {
-						strapi.log.debug(error)
+						strapi.log.error(error)
 				}	
     
   }
@@ -148,7 +152,7 @@ let docs =  await this.createDocumt(nombreFile, file, textSplitter, clienteEmpre
 					await this.processDocs(job, docs, embading, { ...dbConfig, extraData });
 					job.moveToCompleted('done', true);
 			} catch (error) {
-					console.error('Error processing document:', error.message);
+					strapi.log.error('Error processing document:', error.message);
 					job.moveToFailed({ message: 'job failed' });
 						throw error.message;
 					
@@ -174,7 +178,7 @@ let docs =  await this.createDocumt(nombreFile, file, textSplitter, clienteEmpre
 									job.progress(100);
 							} catch (docError) {
 									// Log the error specific to the document processing but allow other documents to continue processing
-									console.error(`Error processing document: ${docError.message}`);
+									strapi.log.error(`Error processing document: ${docError.message}`);
 							}
 
 
@@ -191,7 +195,7 @@ let docs =  await this.createDocumt(nombreFile, file, textSplitter, clienteEmpre
 					});
 			} catch (error) {
 					// Captura de errores generales en el proceso de documentos
-					console.error('Ocurrió un error al procesar las promesas:', error.message);
+					strapi.log.error('Ocurrió un error al procesar las promesas:', error.message);
 					throw new Error('Failed to process documents due to an error');
 			}
 	}
