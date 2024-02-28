@@ -29,7 +29,6 @@ module.exports = createCoreController('api::grupo-de-incrustacion.grupo-de-incru
 				infobase: true,
 				queueState: "completed"
 		};
-		strapi.log.debug(_client)
 		if (_client !== null && _client !== undefined && _client !== "null" && _client) {
 				where.client = _client;
 		}
