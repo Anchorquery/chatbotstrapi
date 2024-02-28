@@ -111,11 +111,7 @@ module.exports = createCoreController('api::chat.chat', ({ strapi }) => ({
 			}
 
 			_items[i].lastMessage = messages[0];
-			if(!chat.name){
 
-				_items[i].name = _items[i].lastMessage ? _items[i].lastMessage.content : "Sin nombre"
-
-			}
 		}
 
 
@@ -549,7 +545,7 @@ module.exports = createCoreController('api::chat.chat', ({ strapi }) => ({
 
 		// busco todos los mensajes del chat
 
-		const messages = await strapi.db.query('api::message.message').findMany({
+	const messages = await strapi.db.query('api::message.message').findMany({
 
 			where: {
 
@@ -557,7 +553,7 @@ module.exports = createCoreController('api::chat.chat', ({ strapi }) => ({
 
 			},
 
-			limit: 1000,
+			limit: 5000,
 
 		});
 
@@ -576,6 +572,14 @@ module.exports = createCoreController('api::chat.chat', ({ strapi }) => ({
 			});
 
 		});
+
+	/*	await strapi.db.query('api::message.message').deleteMany({
+			where: {
+				chat: {
+						id: chatModel.id
+					},
+			},
+	});*/
 
 
 
