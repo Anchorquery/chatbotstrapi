@@ -15,7 +15,7 @@ module.exports = createCoreController('api::grupo-de-incrustacion.grupo-de-incru
 
 		if (!user) return ctx.unauthorized("Unauthorized");
 
-		let { _limit, _page, _sort, _q, _where, _client, _isMe, _type } = ctx.query;
+		let { _limit, _page, _sort, _q, _where, _client, _isMe, _type,_isInfobase , _state} = ctx.query;
 
 	
 
@@ -26,7 +26,7 @@ module.exports = createCoreController('api::grupo-de-incrustacion.grupo-de-incru
 		
 
 		let where = {
-				infobase: true,
+			
 				queueState: "completed"
 		};
 		if (_client !== null && _client !== undefined && _client !== "null" && _client) {
@@ -38,6 +38,16 @@ module.exports = createCoreController('api::grupo-de-incrustacion.grupo-de-incru
 
 		if(_isMe){
 				where.create = user.id;
+		}
+
+		if(_isInfobase == true){
+
+			where.infobase = _isInfobase;
+		}
+
+		if(_state){
+
+			where.queueState = _state;
 		}
 
 		if(_q){
