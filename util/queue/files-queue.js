@@ -100,6 +100,7 @@ class DocumentQueue {
 
 	async onRemoved(job) {
 			strapi.log.debug(`Job ${job.id} has been removed.`);
+			
 	}
 
 	onProgress(job, progress) {

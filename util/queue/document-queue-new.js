@@ -73,10 +73,11 @@ class DocumentSitemapQueue {
 			this.updateGroupIncrustation('active', true);
 	}
 
-	onCompleted(job) {
+	async onCompleted(job) {
 			strapi.log.debug(`A job with ID ${job.id} has been completed`);
 			this.emitMessageTask('completed', `Tarea completada`);
 			this.updateGroupIncrustation('completed', false);
+			await this.queue.close();
 	}
 
 	onFailed(job, err) {
