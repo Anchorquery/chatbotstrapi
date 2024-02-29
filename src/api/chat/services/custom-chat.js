@@ -301,15 +301,15 @@ module.exports = createCoreService('api::chat.chat', ({ strapi }) => ({
 
   if (!chat) return;
 
-  if (!limit) limit = 100;
+  if (!limit) limit = 20;
   
   // busco todos lo mensajes del chat con el limit y los ordeno por fecha
-
+  console.log(chat)
   const mensajes = await strapi.db.query('api::message.message').findMany({
     where: {
       chat: chat.id,
       sender: {
-        in: ['user', 'ia']
+        $in: ['user', 'ia']
       }
     },
     limit: limit
