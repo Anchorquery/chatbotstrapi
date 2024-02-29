@@ -73,7 +73,6 @@ async buscarCliente(clientUUID) {
 async limpiarNombreArchivo(nombreArchivo) {
   // Separa la base del nombre del archivo de su extensión usando el último punto.
   const partes = nombreArchivo.split('.');
-  const extension = partes.pop(); // Remueve y guarda la extensión (último elemento).
   const nombreBase = partes.join('.'); // Une de nuevo las partes restantes, en caso de que hubiera más de un punto.
 
   // Limpia el nombre base del archivo: quita espacios en blanco al inicio y al final, y remueve caracteres especiales.

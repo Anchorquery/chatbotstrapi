@@ -107,11 +107,13 @@ class DocumentQueue {
 			this.emitMessageTask('progress', `Tarea en proceso`, progress);
 	}
 
-	emitMessageTask(type, message, progress = null) {
+	emitMessageTask(type, message, progress = null, ) {
 			const payload = { type, message };
 			if (progress !== null) {
 					payload.progress = progress;
 			}
+
+payload.grupoIncrustacion = this.groupIncrust;
 			// @ts-ignore
 			strapi.io.in(`user_${this.user.uuid}`).emit('messageTaskSchedule', payload);
 	}
@@ -138,7 +140,7 @@ class DocumentQueue {
 	
 
 let docs =  await this.createDocumt(nombreFile, file, textSplitter, clienteEmpresa ? clienteEmpresa.nombre  : null)
-				strapi.log.debug("GRUPO D EINCRUSTACION",this.groupIncrust)
+
 					let extraData = {
 							custom: true,
 							client: clienteEmpresa ? clienteEmpresa.id : null,

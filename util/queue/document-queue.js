@@ -12,8 +12,8 @@ const { RecursiveCharacterTextSplitter } = require('langchain/text_splitter');
 const path = require('path');
 const fs = Promise.promisifyAll(require('fs'));
 const textSplitter = new RecursiveCharacterTextSplitter({
-	chunkSize: 1000,
-	chunkOverlap:200,
+	chunkSize: 2000,
+	chunkOverlap:100,
 });
 
 const {REDIS_PASSWORD, REDIS_HOST,REDIS_PORT,REDIS_DB} = process.env;

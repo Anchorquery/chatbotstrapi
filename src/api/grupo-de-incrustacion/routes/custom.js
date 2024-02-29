@@ -9,7 +9,15 @@ module.exports = {
 							middlewares: [],
 					},
 			},
-
+			{
+				method: "PUT",
+				path: "/grupos-incrustacion/update-infobase/:uuid",
+				handler: "custom.updateInfobase",
+				config: {
+						policies: [],
+						middlewares: [],
+				},
+		},
 		
 	],
 };

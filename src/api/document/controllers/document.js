@@ -105,6 +105,7 @@ module.exports = createCoreController('api::document.document', ({ strapi }) => 
 							title: nombreFile,
 							client: clienteEmpresa.id,
 							create: user.id,
+							queueState: "waiting"
 						}
 
 					}
@@ -136,7 +137,9 @@ module.exports = createCoreController('api::document.document', ({ strapi }) => 
 
 
 
-
+			await strapi.db.query('api::grupo-de-incrustacion.grupo-de-incrustacion').update({
+				where: { id: grupoIncrustacion.id },
+				data: { queueState: "waiting", inQueue: true }});
 
 			await strapi.plugin('upload').service('upload').uploadFileAndPersist(entity)
 
@@ -187,12 +190,20 @@ module.exports = createCoreController('api::document.document', ({ strapi }) => 
 				dbConfig,
 			);
 		} catch (error) {
-			
-			 strapi.log.debug(error);
+			await strapi.db.query('api::grupo-de-incrustacion.grupo-de-incrustacion').update({
+				where: { id: grupoIncrustacion.id },
+				data: { queueState: "error", inQueue: false }
+		});
+		strapi.log.debug(error);
+			return ctx.badRequest("Error", { message: error });
+			 
 		}
 
 
-
+		await strapi.db.query('api::grupo-de-incrustacion.grupo-de-incrustacion').update({
+			where: { id: grupoIncrustacion.id },
+			data: { queueState: "completed", inQueue: false }
+	});
 			return ctx.send({ message: 'File uploaded' });
 		} catch (error) {
 

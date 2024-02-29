@@ -5,7 +5,7 @@
 	*/
 
 const { createCoreController } = require('@strapi/strapi').factories;
-
+const DocumentQueue = require("../../../../util/queue/files-queue.js");
 module.exports = createCoreController('api::grupo-de-incrustacion.grupo-de-incrustacion', ({ strapi }) => ({
 
 
@@ -36,7 +36,7 @@ module.exports = createCoreController('api::grupo-de-incrustacion.grupo-de-incru
 			where.type = _type;
 	}
 
-		if(_isMe){
+		if(_isMe == true){
 				where.create = user.id;
 		}
 
@@ -79,7 +79,7 @@ module.exports = createCoreController('api::grupo-de-incrustacion.grupo-de-incru
 
       _items.forEach(element => {
 
-        element.create = `${element.create?.name} ${element.create?.lastName}`
+        element.create = element.create?.name ? `${element.create?.name} ${element.create?.lastName}` :element.create?.email;
         
 
       });
@@ -89,7 +89,107 @@ module.exports = createCoreController('api::grupo-de-incrustacion.grupo-de-incru
 
 			const _lastPage = Math.ceil(_total / _limit);
 			return ctx.send({ data: _items, meta: { pagination: { page: _page, limit: _limit, total: _total, lastPage: _lastPage } } });
+	},
+	async updateInfobase(ctx){
+
+const {uuid} = ctx.params;
+
+let { title , client, state} = ctx.request.body;
+
+
+
+//buso el cliente
+
+client = await await strapi.db.query("api::client.client").findOne({
+	where:{
+		uuid:client
 	}
+});
+
+
+
+
+await strapi.db.query("api::grupo-de-incrustacion.grupo-de-incrustacion").update ({
+	where:{
+		uuid
+	},
+	data:{
+		title,
+		client:client?.id
+	}
+});
+
+if(state != "completed"){
+
+	const grupoIncrustacion = await strapi.db.query("api::grupo-de-incrustacion.grupo-de-incrustacion").findOne({
+		where:{
+			uuid:uuid
+		},
+
+		populate :true 
+
+	});
+console.log(grupoIncrustacion)
+	if(!grupoIncrustacion || grupoIncrustacion.media == null){
+
+return ctx.badRequest ("Grupo de incrustacion no encontrado");
+
+	}
+
+
+
+	// elimino todas las incrustaciones actuales
+
+
+	await strapi.db.query("api::document.document").deleteMany({
+		where: {
+			grupoIncrustacion: {
+				$eq: grupoIncrustacion.id,
+			},
+		},
+	});
+
+this.procesarYSubirDocumento(grupoIncrustacion.id,title,grupoIncrustacion.media,client,ctx.state.user);
+
+
+}
+
+
+
+
+
+return ctx.send({ data:uuid });
+
+
+	},
+
+	async procesarYSubirDocumento(grupoIncrustacion,nombreFile, file, clienteEmpresa, user) {
+
+  try {
+
+
+    const documentQueue = new DocumentQueue(
+      user,grupoIncrustacion
+      );
+
+      strapi.log.debug(documentQueue)
+      strapi.log.debug("grupoIncrustacion al llamar la funcion")
+      strapi.log.debug(grupoIncrustacion)
+  
+  
+    documentQueue.addDocumentToQueue( { infobase:true,nombreFile,clienteEmpresa,user, grupoIncrustacion, file } );
+  } catch (error) {
+
+    strapi.log.debug(error)
+    return error.message ;
+
+    
+  }
+
+
+
+},
+
 
 
 
