@@ -441,24 +441,55 @@ strapi.log.debug(ctx.request.body.data);
 
 		if (!user) return ctx.unauthorized("Unauthorized");
 
-		let { _limit, _page, _sort, _q, _where } = ctx.query;
+		let { _limit, _page, _sort, _q, _where, _client, _isMe, _type, _isInfobase, _state } = ctx.query;
 
-		 _limit = _limit ? parseInt(_limit) : 10;
-			_page = _page ? parseInt(_page) : 1;
-			_sort = _sort ? _sort : 'createdAt:desc';
-			_q = _q ? _q : '';
+		_limit = _limit ? parseInt(_limit) : 10;
+		_page = _page ? parseInt(_page) : 1;
+		_sort = _sort ? _sort : 'createdAt:desc';
+		_q = _q ? _q : '';
 
-		// busco los grupo de inscrustaciones
+
+		let where = {
+
+			queueState: "completed"
+		};
+		if (_client !== null && _client !== undefined && _client !== "null" && _client) {
+			where.client = _client;
+		}
+		if (_type !== null && _type !== undefined && _type !== "null" && _type) {
+			where.isTag = _type == true ? true :false;
+		}
+
+
+
+		if (_isMe == true) {
+			where.create = user.id;
+		}
+
+		//if (_isInfobase == true) {
+
+			where.infobase = true;
+		//}
+
+		if (_state) {
+
+			where.queueState = _state;
+		}
+
+		if (_q) {
+			where.title = {
+				$containsi: _q
+			}
+		}
+
+
 
 		const _offset =  (_page - 1) * _limit;			
 			let _items = await strapi.db.query("api::grupo-de-incrustacion.grupo-de-incrustacion").findWithCount({
-				limit:_limit,
+				limit: _limit,
 				offset: _offset,
-				where: {
-					create: user.id,
-					infobase:true,
-					queueState:"completed"
-				},
+				where: where,
+				populate: ["client","tags"]
 				
 			});
 
