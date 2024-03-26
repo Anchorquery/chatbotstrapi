@@ -5,6 +5,7 @@
 	*/
 const showdown = require('showdown');
 const client = require('../../client/controllers/client');
+const { forEach } = require('../../../../config/middlewares');
 
 const { createCoreController } = require('@strapi/strapi').factories;
 
@@ -453,12 +454,18 @@ strapi.log.debug(ctx.request.body.data);
 
 			queueState: "completed"
 		};
+
+		if (_type !== null && _type !== undefined && _type !== "null" && _type) {
+
+			where.isTag = _type == "true" ? true :false;
+
+		}
+
+		
 		if (_client !== null && _client !== undefined && _client !== "null" && _client) {
 			where.client = _client;
 		}
-		if (_type !== null && _type !== undefined && _type !== "null" && _type) {
-			where.isTag = _type == true ? true :false;
-		}
+
 
 
 
@@ -466,10 +473,10 @@ strapi.log.debug(ctx.request.body.data);
 			where.create = user.id;
 		}
 
-		//if (_isInfobase == true) {
+		if (_isInfobase == true) {
 
 			where.infobase = true;
-		//}
+		}
 
 		if (_state) {
 
@@ -484,21 +491,58 @@ strapi.log.debug(ctx.request.body.data);
 
 
 
-		const _offset =  (_page - 1) * _limit;			
-			let _items = await strapi.db.query("api::grupo-de-incrustacion.grupo-de-incrustacion").findWithCount({
+		const _offset =  (_page - 1) * _limit;
+		let _items =[];
+		if(!where.isTag){
+		
+			_items = await strapi.db.query("api::grupo-de-incrustacion.grupo-de-incrustacion").findWithCount({
 				limit: _limit,
 				offset: _offset,
 				where: where,
-				populate: ["client","tags"]
-				
+				select: ['title', 'uuid','id'],
+				orderBy: ['title'],
 			});
 
+		}else{
+// @ts-ignore
+			where ={};
+			if (_q) {
 
+
+				// @ts-ignore
+				where= {
+					title :{
+						$containsi: _q
+					}
+
+				}
+			}
+
+			_items = await strapi.db.query("api::tag.tag").findWithCount({
+				limit: _limit,
+				offset: _offset,
+				where: where,
+				select: ['title', 'uuid','id'],
+				orderBy: ['title'],
+			});
+
+		}
 
 			const _total = _items[1];
 
 			// @ts-ignore
 			_items = _items[0];
+
+			// recorro los items y le añado nu isTag = true
+
+
+			_items.forEach( item => {
+	
+	item.isTag = _type == "true" ? true :false; 
+	
+});
+
+
 
 			const _lastPage = Math.ceil(_total / _limit);
 			return ctx.send({ data: _items, meta: { pagination: { page: _page, limit: _limit, total: _total, lastPage: _lastPage } } });

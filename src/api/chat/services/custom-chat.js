@@ -399,71 +399,148 @@ async prepararMemoriaVector(idUser, message, match_count, sala ) {
 },
 
 // @ts-ignore
-async getMatchesFromEmbeddings ( creator, message, match_count,client = null,mentions=[],grupo_incrustacion = null) {
-
+async getMatchesFromEmbeddings(creator, message, match_count, client = null, mentions = { archivo: [], tag: [] }, grupo_incrustacion = null) {
   try {
-    
     const embedder = new OpenAIEmbeddings({
       modelName: "text-embedding-ada-002"
     });
 
-    
+    let grupoIncrustacionIds = [];
 
 
-    if(mentions.length>0){
-      message = obtenerTituloDelDocumento(message);
-      strapi.log.debug(message)
-      const embeddings = await embedder.embedQuery(message);
+    let elementos = null;
+    if (mentions.archivo.length > 0 || mentions.tag.length > 0) {
+      if (mentions.tag.length > 0) {
+
+        elementos = await this.buscarGruposDeIncrustacionPorTags(mentions.tag);
       
-      var {data} = await clientS.rpc('match_documents_mentions', {
+        // @ts-ignore
+        grupoIncrustacionIds = elementos.idsUnicos;
+      }
+ 
+      // @ts-ignore
+      message = obtenerTituloDelDocumento(message,elementos?.title);
+      console.log(message)
+      const embeddings = await embedder.embedQuery(message);
+
+
+    if (mentions.archivo.length > 0) {
+      // Convierte el array existente a un Set para garantizar unicidad
+      const uniqueIds = new Set(grupoIncrustacionIds.map(id => parseInt(id, 10)));
+  
+      // Añade los nuevos IDs del array mentions.archivo al conjunto, convirtiéndolos a enteros
+      mentions.archivo.forEach(id => uniqueIds.add(parseInt(id, 10)));
+  
+      // Convierte el conjunto de vuelta a un array para asignarlo a grupoIncrustacionIds
+      grupoIncrustacionIds = Array.from(uniqueIds);
+  }
+
+  console.log ("grupoIncrustacionIds",grupoIncrustacionIds)
+
+      var { data } = await clientS.rpc('match_documents_mentions', {
         query_embedding: embeddings,
         match_threshold: 0.78,
-        match_count:10, 
-        client : client ? client : null,
-        creator : creator ? creator : null,
-        grupo_incrustacion : mentions.length ? mentions :null,
+        match_count: 10,
+        client: client ? client : null,
+        creator: creator ? creator : null,
+        grupo_incrustacion: grupoIncrustacionIds.length > 0 ? grupoIncrustacionIds : null,
       });
 
+      console.log(data);
 
-    }else
-    {
+    } else {
       const embeddings = await embedder.embedQuery(message);
 
-      var {data} = await clientS.rpc('query_documents', {
+      var { data } = await clientS.rpc('query_documents', {
         query_embedding: embeddings,
         match_threshold: 0.78,
-        match_count:match_count, 
-        client : client ? client : null,
-        //creator : creator ? creator : null,
-        grupo_incrustacion : mentions.length ? mentions :null,
+        match_count: match_count,
+        client: client ? client : null,
+        grupo_incrustacion: grupoIncrustacionIds.length > 0 ? grupoIncrustacionIds : null,
       });
     }
 
-
-
     return data;
-
-    
   } catch (error) {
-    strapi.log.debug(error)
+    console.log(error);
     throw new Error(`Error querying embeddings: ${error}`);
   }
+},
+
+async buscarGruposDeIncrustacionPorTags(tags) {
 
 
+  let result =await strapi.entityService.findMany('api::grupo-de-incrustacion.grupo-de-incrustacion', {
+    fields: ['id', 'title'],
+    filters: {
+      tags: {
+        id: {
+        $in: tags,
+        }
+      },
+    },
+
+    
+  });
+
+
+  // recorro para retornar un array de ids
+
+  let items =[];
+  // @ts-ignore
+   items.idsUnicos = [...new Set(result.map(item => item.id))];
+   // @ts-ignore
+   items.title = [...new Set(result.map(item => item.title))];
+    
+  return items;
 }
+
+
 }));
 
-function obtenerTituloDelDocumento(mensaje) {
-  // Utilizamos una expresión regular para encontrar el título del documento dentro del mensaje
-  const regex = /<span class="mention" .*? title="(.*?)".*?>(.*?)<\/span>/;
-  const match = mensaje.match(regex);
+// function obtenerTituloDelDocumento(mensaje) {
+//   // Utilizamos una expresión regular para encontrar el título del documento dentro del mensaje
+//   const regex = /<span class="mention" .*? title="(.*?)".*?>(.*?)<\/span>/;
+//   const match = mensaje.match(regex);
   
-  if (match) {
-      // El título del documento se encuentra en el grupo de captura número 1
-      const titulo = match[1];
+//   if (match) {
+//       // El título del documento se encuentra en el grupo de captura número 1
+//       const titulo = match[1];
+//       return `DOCUMENT NAME: ${titulo}`;
+//   } else {
+//       return mensaje;
+//   }
+// }
+
+function obtenerTituloDelDocumento(mensaje, titulos = []) {
+  // Ajusta la expresión regular para capturar el contenido relevante de las menciones.
+  const regex = /<span class="(archivo|tag) mention" .*? title="(.*?)".*?>(.*?)<\/span>/g;
+
+  // Inicializa un índice para iterar sobre el array de títulos solo para tags
+  let tituloIndex = 0;
+
+  // Reemplaza cada coincidencia en el mensaje.
+  const mensajeModificado = mensaje.replace(regex, (match, clase, titulo, contenido) => {
+    // Si la mención es de tipo 'tag', usa un título del array 'titulos'.
+    if (clase === 'tag') {
+      // Verifica si aún hay títulos disponibles en el array.
+      if (tituloIndex < titulos.length) {
+        // Reemplaza con el título del array 'titulos'.
+        const tituloReemplazo = `DOCUMENT NAME: ${titulos[tituloIndex]}`;
+        tituloIndex++; // Prepara el índice para el próximo título.
+        return tituloReemplazo;
+      } else {
+        // Si se acabaron los títulos, devuelve el match original o maneja como necesario.
+        return match; // O podría ser una cadena vacía o algún marcador de posición.
+      }
+    } else if (clase === 'archivo') {
+      // Para 'archivo', se mantiene el comportamiento original.
       return `DOCUMENT NAME: ${titulo}`;
-  } else {
-      return mensaje;
-  }
+    }
+  });
+
+  return mensajeModificado;
 }
+
+
 

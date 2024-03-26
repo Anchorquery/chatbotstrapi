@@ -201,7 +201,7 @@ module.exports = {
 
               let mentions = extractMentionData(message,true);
               
-              strapi.log.debug(mentions)
+              console.log(mentions)
              
   
   
@@ -264,7 +264,7 @@ module.exports = {
 
               let relationMessages = [];
               let pastMessages=[];
-              if(mentions.length == 0 ){
+              if(mentions.archivo.length === 0 && mentions.tag.length === 0) {
                  [relationMessages,pastMessages] = await Promise.all([strapi.services['api::chat.custom-chat'].prepararMemoriaVector(socket.user.id, message, cantidadVectoresMenajes, chatModel.id), await strapi.services['api::chat.custom-chat'].prepararMemoria(message,chatModel, cantidadMensajesHistorial)]);
               }
   
@@ -296,6 +296,8 @@ module.exports = {
   
   
               let matches = await strapi.services['api::chat.custom-chat'].getMatchesFromEmbeddings(socket.user.id, inquiry, cantidadVectoresMenajes, client,mentions);
+
+              console.log("MATCHES", matches)
   
               // emito mensaje de que se han encontrado documentos relacionados
 
@@ -383,10 +385,9 @@ module.exports = {
                 - CHATHISTORY es una memoria con mensajes pasados que tiene relacion con el mensaje del usuario. 
                 - MEMORY corresponde a los ultimos mensajes de la conversación en orden cronologico. 
                 - RELEVANTDOCS , información relevante que guarda relación con el mensaje del usuario (INPUT).
-                -Se proporciona parte del historial de chat como JSON, no debes mostrar este JSON. No inicies tu respuesta con "AI:" o "Como asistente de IA". 
                 - Tienes acceso al historial de chat con el usuario (CHATHISTORY/MEMORY) y al contexto (RELEVANTDOCS) proporcionado por el usuario. 
                 - Al responder, piensa si el mensaje (INPUT) se refiere a algo en la MEMORY o en el CHATHISTORY antes de consultar los RELEVANTDOCS. 
-                - Si el mensaje del usuario (INPUT) no tiene relación con la MEMORIA o con el CHATHISTORY no los uses como referencia. Si no tienen información no la inventes. 
+                - Si el mensaje del usuario (INPUT) no tiene relación con la MEMORIA o con el CHATHISTORY no los uses como referencia. Si no tienen información no la inventes, pero si hay  RELEVANTDOCS responde en base a eso.
                 - No justifiques tus respuestas, si el INPUT no tiene ninguna relación o sentido con MEMORY,CHATHISTORY o  RELEVANTDOCS  entonces no los uses como contexto. 
                 - No te refieras a ti mismo en ninguno de los contenidos creados. 
                 - Siempre responde en {idioma}.
@@ -462,7 +463,7 @@ module.exports = {
                     
                   }
                 }),
-              });
+              }); 
               const chain = new LLMChain({
                 llm: model,
                 memory: memory,
@@ -558,21 +559,48 @@ module.exports = {
         throw error;
       }
     });
-    function extractMentionData(htmlMessage, data_id = false) {
-      const mentionRegex = /<span class="mention"[^>]*title="([^"]*)"[^>]*data-id="([^"]*)"[^>]*>/g;
-      const matches = [...htmlMessage.matchAll(mentionRegex)];
+    // function extractMentionData(htmlMessage, data_id = false) {
+    //   const mentionRegex = /<span class="mention"[^>]*title="([^"]*)"[^>]*data-id="([^"]*)"[^>]*>/g;
+    //   const matches = [...htmlMessage.matchAll(mentionRegex)];
       
-      if (data_id) {
-        // Si data_id es verdadero, retorna solo un array de data-ids convertidos a enteros.
-        return matches.map(match => parseInt(match[2], 10));
-      } else {
-        // Retorna el objeto con title y dataId (convertido a entero) si data_id es falso.
-        return matches.map(match => ({
-          title: match[1],
-          dataId: parseInt(match[2], 10), // Convierte dataId a entero
-        }));
-      }
+    //   if (data_id) {
+    //     // Si data_id es verdadero, retorna solo un array de data-ids convertidos a enteros.
+    //     return matches.map(match => parseInt(match[2], 10));
+    //   } else {
+    //     // Retorna el objeto con title y dataId (convertido a entero) si data_id es falso.
+    //     return matches.map(match => ({
+    //       title: match[1],
+    //       dataId: parseInt(match[2], 10), // Convierte dataId a entero
+    //     }));
+    //   }
+    // }
+    function extractMentionData(htmlMessage, data_id = false) {
+      // Ajusta la expresión regular para que coincida con tu HTML específico.
+      const mentionRegex = /<span class="(archivo|tag) mention" contenteditable="true" title="([^"]+)" data-id="([^"]+)"[^>]*>/g;
+      const matches = [...htmlMessage.matchAll(mentionRegex)];
+    
+      const result = {
+        archivo: [],
+        tag: []
+      };
+    
+      matches.forEach(match => {
+        const dataId = match[3]; // Captura data-id
+        const title = match[2]; // Captura el título
+    
+        const item = data_id ? dataId : { title, dataId };
+    
+        // Determina si es archivo o tag y añade al array correspondiente.
+        if (match[1] === 'archivo') {
+          result.archivo.push(item);
+        } else if (match[1] === 'tag') {
+          result.tag.push(item);
+        }
+      });
+    
+      return result;
     }
+    
     
     
 

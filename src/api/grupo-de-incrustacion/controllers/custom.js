@@ -63,7 +63,7 @@ module.exports = createCoreController('api::grupo-de-incrustacion.grupo-de-incru
 			limit: _limit,
 			offset: _offset,
 			where: where,
-			populate: ["media", "client", "create","tags"]
+			populate: ["media", "client", "create", "tags"]
 		});
 
 
@@ -103,7 +103,7 @@ module.exports = createCoreController('api::grupo-de-incrustacion.grupo-de-incru
 		});
 
 
-		tags = await this.procesarTags(tags); 
+		tags = await this.procesarTags(tags);
 
 
 
@@ -114,8 +114,8 @@ module.exports = createCoreController('api::grupo-de-incrustacion.grupo-de-incru
 			data: {
 				title,
 				client: client?.id,
-				tags : tags,
-				isTag : tags && tags.length >0 ? true : false
+				tags: tags,
+				isTag: tags && tags.length > 0 ? true : false
 			}
 		});
 
@@ -155,31 +155,31 @@ module.exports = createCoreController('api::grupo-de-incrustacion.grupo-de-incru
 
 
 
-		
+
 
 		return ctx.send({ data: uuid });
 
 
 	},
 
-	async procesarTags(tags){
+	async procesarTags(tags) {
 		if (tags && tags.length > 0) {
 
-				let arrayTags=[];
+			let arrayTags = [];
 			for (let tagName of tags) {
-							let existingTag = await strapi.db.query("api::tag.tag").findOne({
-											where: { title: tagName }
-							});
+				let existingTag = await strapi.db.query("api::tag.tag").findOne({
+					where: { title: tagName }
+				});
 
-							if (!existingTag) {
-											// Crear el tag si no existe
-										existingTag =		await strapi.db.query("api::tag.tag").create({
-															data: { title: tagName }
-											});
-							}
+				if (!existingTag) {
+					// Crear el tag si no existe
+					existingTag = await strapi.db.query("api::tag.tag").create({
+						data: { title: tagName }
+					});
+				}
 
 
-							arrayTags.push(existingTag.id);
+				arrayTags.push(existingTag.id);
 
 
 			}
@@ -187,7 +187,7 @@ module.exports = createCoreController('api::grupo-de-incrustacion.grupo-de-incru
 
 			return arrayTags;
 
-}
+		}
 	},
 
 	async procesarYSubirDocumento(grupoIncrustacion, nombreFile, file, clienteEmpresa, user) {
@@ -217,7 +217,37 @@ module.exports = createCoreController('api::grupo-de-incrustacion.grupo-de-incru
 
 	},
 
+	async updateInfobaseCron(ctx) {
 
+		let grupos_incrustacion = await strapi.db.query("api::grupo-de-incrustacion.grupo-de-incrustacion").findMany({
+			limit: 1000,
+		});
+
+
+
+		for (let grupoIncrustacion of grupos_incrustacion) {
+
+
+			await strapi.db.query("api::grupo-de-incrustacion.grupo-de-incrustacion").update({
+				where: {
+					id: grupoIncrustacion.id
+				},
+				data: {
+
+					isTag: false
+
+				}
+
+			});
+
+
+		}
+
+
+return ctx.send({ data: "ok" });
+
+
+	}
 
 
 

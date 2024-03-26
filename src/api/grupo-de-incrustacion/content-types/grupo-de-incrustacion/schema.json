@@ -79,14 +79,15 @@
       "type": "boolean",
       "default": false
     },
-    "tags": {
-      "type": "relation",
-      "relation": "oneToMany",
-      "target": "api::tag.tag"
-    },
     "isTag": {
       "type": "boolean",
       "default": false
+    },
+    "tags": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::tag.tag",
+      "inversedBy": "grupos"
     }
   }
 }

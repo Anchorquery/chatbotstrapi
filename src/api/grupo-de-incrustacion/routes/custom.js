@@ -18,6 +18,15 @@ module.exports = {
 						middlewares: [],
 				},
 		},
+		{
+			method: "GET",
+			path: "/grupos-incrustacion/update-infobase-cron",
+			handler: "custom.updateInfobaseCron",
+			config: {
+					policies: [],
+					middlewares: [],
+			},
+	},
 		
 	],
 };
