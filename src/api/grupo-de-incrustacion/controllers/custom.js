@@ -90,6 +90,43 @@ module.exports = createCoreController('api::grupo-de-incrustacion.grupo-de-incru
 		const _lastPage = Math.ceil(_total / _limit);
 		return ctx.send({ data: _items, meta: { pagination: { page: _page, limit: _limit, total: _total, lastPage: _lastPage } } });
 	},
+	async findOneInfobase(ctx) {
+
+		const { user } = ctx.state;
+
+		if (!user) return ctx.unauthorized("Unauthorized");
+
+		let { uuid } = ctx.params;
+
+
+
+		let where = {
+			uuid
+		};
+
+
+		// Realiza la consulta con las condiciones acumuladas en 'where'
+		let _item = await strapi.db.query("api::grupo-de-incrustacion.grupo-de-incrustacion").findOne({
+			where: where,
+			populate: ["media", "client", "tags"]
+		});
+
+
+
+		console.log(_item.tags)
+				if(_item.tags && _item.tags.length>0){
+
+					_item.tags = _item.tags.map(tag => tag.title);
+
+				} 
+
+
+				console.log(_item.tags)
+
+
+
+		return ctx.send({ data: _item, meta: { } });
+	},
 	async updateInfobase(ctx) {
 
 		const { uuid } = ctx.params;
@@ -101,23 +138,29 @@ module.exports = createCoreController('api::grupo-de-incrustacion.grupo-de-incru
 				uuid: client
 			}
 		});
-
+		console.log("tags",tags)
 
 		tags = await this.procesarTags(tags);
 
 
-
-		await strapi.db.query("api::grupo-de-incrustacion.grupo-de-incrustacion").update({
+	let grupoIns=	await strapi.db.query("api::grupo-de-incrustacion.grupo-de-incrustacion").findOne({
 			where: {
 				uuid
-			},
+			}
+		});
+
+		console.log("tags",tags)
+
+		await strapi.entityService.update('api::grupo-de-incrustacion.grupo-de-incrustacion', grupoIns.id, {
 			data: {
 				title,
 				client: client?.id,
 				tags: tags,
 				isTag: tags && tags.length > 0 ? true : false
-			}
-		});
+			},
+	});
+
+
 
 		if (state != "completed") {
 
@@ -216,6 +259,9 @@ module.exports = createCoreController('api::grupo-de-incrustacion.grupo-de-incru
 
 
 	},
+
+
+
 
 	async updateInfobaseCron(ctx) {
 

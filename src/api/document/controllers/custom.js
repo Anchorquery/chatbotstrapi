@@ -23,9 +23,6 @@ module.exports = createCoreController('api::document.document', ({ strapi }) => 
 
       let nombreFile = ctx.request.body.name;
 
-      let tags = ctx.ctx.request.body.tags;
-
-      console.log(tags)
 
 
       if (!file) return ctx.badRequest("File required", { message: 'File required' });

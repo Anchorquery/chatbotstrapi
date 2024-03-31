@@ -192,10 +192,10 @@ module.exports = {
 
           });
 
-          socket.on('message', async (data) => {
+          socket.on('message', async (dato) => {
 
             try {
-              let { message, sala, client,cantidadVectoresMenajes,  cantidadMensajesHistorial, language,tone } = data;
+              let { message, sala, client,cantidadVectoresMenajes,  cantidadMensajesHistorial, language,tone } = dato;
 
               message = message.trim();
 
@@ -295,9 +295,9 @@ module.exports = {
   
   
   
-              let matches = await strapi.services['api::chat.custom-chat'].getMatchesFromEmbeddings(socket.user.id, inquiry, cantidadVectoresMenajes, client,mentions);
+              let data = await strapi.services['api::chat.custom-chat'].getMatchesFromEmbeddings(socket.user.id, inquiry, cantidadVectoresMenajes, client,mentions);
 
-              console.log("MATCHES", matches)
+              let matches = data.data;
   
               // emito mensaje de que se han encontrado documentos relacionados
 
@@ -479,12 +479,12 @@ module.exports = {
   
   
               // @ts-ignore
-              const summary = allDocs.length > process.env.LIMIT_DOCUMENT_CHARACTERS_MATH ? await summarizeLongDocument({ document: allDocs, inquiry: inquiry }) : allDocs
+              const summary = allDocs.length > process.env.LIMIT_DOCUMENT_CHARACTERS_MATH ? await summarizeLongDocument({ document: allDocs, inquiry: data.message }) : allDocs
               socket.emit('info', { message: 'Iniciando respuesta.' });
               let response = await chain.call(
                 {
                   history : relationMessages,
-                  input: inquiry,
+                  input: data.message,
                   context: summary,
                   idioma: language || 'Español',
                   tone: tone || 'Formal',

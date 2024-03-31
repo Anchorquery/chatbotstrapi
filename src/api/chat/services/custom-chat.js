@@ -431,11 +431,11 @@ async getMatchesFromEmbeddings(creator, message, match_count, client = null, men
       // Añade los nuevos IDs del array mentions.archivo al conjunto, convirtiéndolos a enteros
       mentions.archivo.forEach(id => uniqueIds.add(parseInt(id, 10)));
   
-      // Convierte el conjunto de vuelta a un array para asignarlo a grupoIncrustacionIds
+
       grupoIncrustacionIds = Array.from(uniqueIds);
   }
 
-  console.log ("grupoIncrustacionIds",grupoIncrustacionIds)
+
 
       var { data } = await clientS.rpc('match_documents_mentions', {
         query_embedding: embeddings,
@@ -446,7 +446,7 @@ async getMatchesFromEmbeddings(creator, message, match_count, client = null, men
         grupo_incrustacion: grupoIncrustacionIds.length > 0 ? grupoIncrustacionIds : null,
       });
 
-      console.log(data);
+
 
     } else {
       const embeddings = await embedder.embedQuery(message);
@@ -460,7 +460,10 @@ async getMatchesFromEmbeddings(creator, message, match_count, client = null, men
       });
     }
 
-    return data;
+    return {
+      data,
+      message
+    };
   } catch (error) {
     console.log(error);
     throw new Error(`Error querying embeddings: ${error}`);

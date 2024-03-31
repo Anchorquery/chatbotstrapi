@@ -20,6 +20,15 @@ module.exports = {
 		},
 		{
 			method: "GET",
+			path: "/grupos-incrustacion/infobase/:uuid",
+			handler: "custom.findOneInfobase",
+			config: {
+					policies: [],
+					middlewares: [],
+			},
+	},
+		{
+			method: "GET",
 			path: "/grupos-incrustacion/update-infobase-cron",
 			handler: "custom.updateInfobaseCron",
 			config: {
