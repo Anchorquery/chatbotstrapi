@@ -1,0 +1,24 @@
+{
+  "kind": "collectionType",
+  "collectionName": "workspaces",
+  "info": {
+    "singularName": "workspace",
+    "pluralName": "workspaces",
+    "displayName": "workspace"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string"
+    },
+    "teamspaces": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::teamspace.teamspace",
+      "mappedBy": "workspace"
+    }
+  }
+}

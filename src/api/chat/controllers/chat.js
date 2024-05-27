@@ -34,21 +34,21 @@ module.exports = createCoreController('api::chat.chat', ({ strapi }) => ({
 		let _items = [];
 		let where = {
 
-	};
+		};
 
-	if (_type !== null && _type !== undefined && _type !== "null" && _type) {
-		where.type = _type;
-}
-
-	if(_isMe){
-			where.user = user.id;
-	}
-
-	if(_q){
-		where.name={
-			$containsi:_q
+		if (_type !== null && _type !== undefined && _type !== "null" && _type) {
+			where.type = _type;
 		}
-	}
+
+		if (_isMe) {
+			where.user = user.id;
+		}
+
+		if (_q) {
+			where.name = {
+				$containsi: _q
+			}
+		}
 
 		_items = await strapi.db.query('api::chat.chat').findWithCount({
 			limit: _limit,
@@ -68,7 +68,7 @@ module.exports = createCoreController('api::chat.chat', ({ strapi }) => ({
 		// los recorro para buscar el ultimo mensaje
 
 
-		for (let i = 0; i < _items.length; i++) {
+		/*for (let i = 0; i < _items.length; i++) {
 
 			const chat = _items[i];
 
@@ -112,7 +112,7 @@ module.exports = createCoreController('api::chat.chat', ({ strapi }) => ({
 
 			_items[i].lastMessage = messages[0];
 
-		}
+		}*/
 
 
 		const _lastPage = Math.ceil(_total / _limit);
@@ -411,7 +411,7 @@ module.exports = createCoreController('api::chat.chat', ({ strapi }) => ({
 		}
 
 
-		return ctx.send({ messages: messages, prompt: titulo });
+		return ctx.send({ messages: messages, prompt: titulo, name: chatModel.name, description: chatModel.description, config: chatModel.config, chat: chatModel.uuid });
 
 
 
@@ -545,7 +545,7 @@ module.exports = createCoreController('api::chat.chat', ({ strapi }) => ({
 
 		// busco todos los mensajes del chat
 
-	const messages = await strapi.db.query('api::message.message').findMany({
+		const messages = await strapi.db.query('api::message.message').findMany({
 
 			where: {
 
@@ -573,13 +573,13 @@ module.exports = createCoreController('api::chat.chat', ({ strapi }) => ({
 
 		});
 
-	/*	await strapi.db.query('api::message.message').deleteMany({
-			where: {
-				chat: {
-						id: chatModel.id
-					},
-			},
-	});*/
+		/*	await strapi.db.query('api::message.message').deleteMany({
+				where: {
+					chat: {
+							id: chatModel.id
+						},
+				},
+		});*/
 
 
 
@@ -594,6 +594,44 @@ module.exports = createCoreController('api::chat.chat', ({ strapi }) => ({
 		});
 
 		return ctx.send({ message: "Chat deleted" });
+
+	},
+
+
+	async updateTitle(ctx) {
+
+
+		const { user } = ctx.state;
+
+		if (!user) return ctx.unauthorized("Unauthorized", { error: "Unauthorized" });
+
+		const { uuid } = ctx.params;
+
+		if (!uuid) return ctx.badRequest("Chat is required", { error: "Chat is required" });
+
+		const { name } = ctx.request.body.data;
+
+		if (!name) return ctx.badRequest("Title is required", { error: "Title is required" });
+
+		await strapi.db.query('api::chat.chat').update({
+
+			where: {
+
+				uuid: uuid,
+
+			},
+
+			data: {
+
+				name: name,
+
+			},
+
+		});
+
+		return ctx.send({ message: "Title updated" });
+
+
 
 	}
 

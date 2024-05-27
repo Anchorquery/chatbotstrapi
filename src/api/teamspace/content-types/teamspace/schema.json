@@ -1,0 +1,41 @@
+{
+  "kind": "collectionType",
+  "collectionName": "teamspaces",
+  "info": {
+    "singularName": "teamspace",
+    "pluralName": "teamspaces",
+    "displayName": "teamspace",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string"
+    },
+    "created": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "brand_voice": {
+      "type": "text"
+    },
+    "privacity": {
+      "type": "enumeration",
+      "enum": [
+        "public",
+        "private"
+      ],
+      "default": "public"
+    },
+    "workspace": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::workspace.workspace",
+      "inversedBy": "teamspaces"
+    }
+  }
+}

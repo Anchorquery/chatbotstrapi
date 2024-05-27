@@ -386,7 +386,7 @@ strapi.log.debug(ctx.request.body.data);
 		// añado a items un objeto con el nombre del padre
 
 		// @ts-ignore
-		_items = {title: nombreParent.title, items: _items };
+		_items = {title: nombreParent?.title, items: _items };
 
 
 

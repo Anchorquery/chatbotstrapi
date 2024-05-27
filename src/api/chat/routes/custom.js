@@ -10,6 +10,17 @@ module.exports = {
 						prefix:	'',
 					}
 			},
+			{
+
+				
+				method: 'PUT',
+				path: '/chats/update-title/:uuid',
+				handler: 'chat.updateTitle',
+				refix:	'',
+				config:{
+					prefix:	'',
+				}
+			}
 
 	]
 }

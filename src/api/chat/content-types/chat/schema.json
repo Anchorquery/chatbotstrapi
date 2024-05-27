@@ -48,6 +48,12 @@
     },
     "name": {
       "type": "string"
+    },
+    "lastMessage": {
+      "type": "text"
+    },
+    "lastModification": {
+      "type": "datetime"
     }
   }
 }
