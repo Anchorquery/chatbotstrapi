@@ -215,8 +215,10 @@ console.log(data)
 
 
 
+              // verifico si sala está vacio o es un objeto vacio
 
-              if (!sala) {
+
+              if (!sala || Object.keys(sala).length === 0){
 
                 // creo un nuevo chat
                 sala = uuidv4();
@@ -366,7 +368,7 @@ console.log(data)
                 // Inicializar el modelo de chat con la URL de la imagen (si se generó una)
                 let model = initializeChatModel(chatModel?.modelName, sala, socket, urlImage);
 
-                // Manejar la cadena de mensajes
+                console.log(info)
                 let response = await handleMessageChain(info, model);
 
                 // Manejar las operaciones de la base de datos
