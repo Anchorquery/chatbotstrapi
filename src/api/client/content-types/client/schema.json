@@ -43,6 +43,33 @@
       "type": "relation",
       "relation": "oneToOne",
       "target": "api::document-file.document-file"
+    },
+    "gpt": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::gpt.gpt",
+      "mappedBy": "client"
+    },
+    "telefono": {
+      "type": "string"
+    },
+    "direction": {
+      "type": "string"
+    },
+    "siteUrl": {
+      "type": "string"
+    },
+    "apps": {
+      "displayName": "apps conects",
+      "type": "component",
+      "repeatable": true,
+      "component": "apps-conects.apps-conects"
+    },
+    "contactPerson": {
+      "type": "string"
+    },
+    "contactEmail": {
+      "type": "string"
     }
   }
 }

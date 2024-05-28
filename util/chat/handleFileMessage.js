@@ -5,7 +5,7 @@ const { generateImageFromPrompt } = require('../common/imageGenerator');
 const { verificarPeticionDeImagen, verificarRespuestaNoDisponible, verificarYTraducirMensajeDeError } = require('../common/util');
 const { documentosNoEstructurados } = require('../loader/Unstructured');
 const { bufferToFile } = require('../common/bufferToFile');
-
+const axios = require('axios').default;
 const { v4: uuid } = require('uuid');
 /*
 Descripción:
@@ -112,7 +112,23 @@ Consideraciones Adicionales:
 Asegúrate de que los permisos y configuraciones necesarias para escribir archivos en el servidor estén correctamente establecidos.
 Manejo de errores robusto para asegurar que cualquier fallo en la comunicación con el modelo de IA o en la generación de la imagen sea adecuadamente reportado.
 */
-async function processImageMessage(fileBlob, message) {
+async function processImageMessage(fileBlob, message, instruccion = null, helper=false) {
+
+    // verifico si fileBlob es un buffer o un string(url de la imagen)
+
+    if (typeof fileBlob === 'string') {
+
+        const response = await axios.get(fileBlob, { responseType: 'arraybuffer' });
+
+        fileBlob = {
+            blob: response.data,
+            type: response.headers['content-type']
+        }
+
+
+    }
+        
+
     const base64Image = fileBlob.blob.toString('base64');
     const imgSrc = `data:${fileBlob.type};base64,${base64Image}`;
 
@@ -129,7 +145,7 @@ async function processImageMessage(fileBlob, message) {
         content: [
             {
                 type: "text",
-                text: 'Describe detalladamente esta imagen, menciona detalladamente   las formas, los colores y estilo artistico; si tiene textos detallalos tambien. en tal caso no puedas  detallarla responde con lo siguiente: "Lo siento, no puedo proporcionar detalles de esta imagen por el siguiente motivo:" y detallas el motivo.',
+                text:instruccion ? instruccion: 'Describe detalladamente esta imagen, menciona detalladamente   las formas, los colores y estilo artistico; si tiene textos detallalos tambien. en tal caso no puedas  detallarla responde con lo siguiente: "Lo siento, no puedo proporcionar detalles de esta imagen por el siguiente motivo:" y detallas el motivo.',
             },
             {
                 type: "image_url",
@@ -140,9 +156,16 @@ async function processImageMessage(fileBlob, message) {
 
     const res = await chat.invoke([prompt]);
 
+
+
+
+    
+
     if (verificarRespuestaNoDisponible(res.content)) {
         return { error: true, message: res.content };
     }
+
+    if(helper == true) return {error:false, message: res.content};
     if (await verificarPeticionDeImagen(message)) {
         return generateImageFromPrompt(res.content, message);
     } else {
@@ -151,4 +174,4 @@ async function processImageMessage(fileBlob, message) {
     }
 }
 
-module.exports = { handleFileMessage };
+module.exports = { handleFileMessage,processImageMessage };

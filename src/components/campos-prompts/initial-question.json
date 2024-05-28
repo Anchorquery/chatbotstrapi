@@ -1,0 +1,12 @@
+{
+  "collectionName": "components_campos_prompts_initial_questions",
+  "info": {
+    "displayName": "initialQuestion"
+  },
+  "options": {},
+  "attributes": {
+    "question": {
+      "type": "string"
+    }
+  }
+}

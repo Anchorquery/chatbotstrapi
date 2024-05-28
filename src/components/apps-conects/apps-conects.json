@@ -1,0 +1,30 @@
+{
+  "collectionName": "components_apps_conects_apps_conects",
+  "info": {
+    "displayName": "apps conects"
+  },
+  "options": {},
+  "attributes": {
+    "name": {
+      "type": "string"
+    },
+    "description": {
+      "type": "text"
+    },
+    "state": {
+      "type": "boolean",
+      "default": false
+    },
+    "type": {
+      "type": "enumeration",
+      "enum": [
+        "apiKey",
+        "url"
+      ],
+      "default": "url"
+    },
+    "value": {
+      "type": "json"
+    }
+  }
+}

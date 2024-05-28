@@ -16,12 +16,14 @@ const SupabaseVectorStoreCustom = require("../util/supabase");
 const clientS = require('../util/superbase-client.js');
 const { handleTextMessage, handleAudioMessage, handleFileMessage, handleUrlMessage } = require("../util/chat/index.js");
 const { initializeChatModel } = require("../util/common/initializeChatModel.js");
-const { handleMessageChain } = require("../util/chat/handleMessageChain");
+const { handleMessageChain, handleMessageChainLite } = require("../util/chat/handleMessageChain");
 const { handleDatabaseOperations } = require("../util/chat/handleDatabaseOperations");
 const { generateImageFromPrompt } = require("../util/common/imageGenerator");
 const { convert } = require('html-to-text');
 const { handlePostImage } = require("../util/chat/handlePostImage");
 const { downloadFileToNetwork } = require("../util/common/bufferToFile");
+const { processImageMessage } = require("../util/chat/handleFileMessage");
+const { ProgressSimulator } = require("../util/common/progressSimulator");
 
 const { OPENAI_API_KEY } = process.env;
 let { URL } = process.env;
@@ -201,7 +203,7 @@ module.exports = {
               
               let { type, sala, message, tone, language, chatModel } = data;
               let urlImage = null;
-
+console.log(data)
               if (!message) {
 
                 socket.emit('errorMessage', { message: 'Mensaje no encontrado' });
@@ -262,13 +264,47 @@ module.exports = {
                 // Verificar si hay intención de generar una imagen
                 if (result.is_image && result.is_post == false) {
 
-                  urlImage = await generateImageFromPrompt("", message);
+                  const simulator = new ProgressSimulator(socket);
+                  simulator.start()
+                  .then(message => {
+                    console.log(message);
+                  })
+                  let resGenerateImage = await generateImageFromPrompt("", message);
 
 
+                  urlImage = await downloadFileToNetwork (resGenerateImage);
+
+                  if (urlImage.error) {
+                    socket.emit('errorMessage', { message: urlImage.message });
+                    return;
+                  }
+
+                  socket.emit('fileGenerate', { message: urlImage, type:"image",accion:"stop", uuid: uuidv4()});
+
+                  ///let model = initializeChatModel(chatModel?.modelName, sala, socket, null);
+
+                  const newRes =await processImageMessage(urlImage.file, message,null, true);
+
+                  if (newRes.error) {
+
+                    socket.emit('errorMessage', { message: newRes.message });
+ 
+                    return;
+
+                  }
+                
+
+
+
+                  //await  handleMessageChainLite({message:newRes.message , context :message}, model);
+
+                  simulator.cancel();
+
+                  await handleDatabaseOperations(message, "Imagen generada correctamente" , sala, 'user', 'ia',urlImage.file);
 	                
 
 
-                  socket.emit('fileGenerate', { message: message, type:"image", file:urlImage });
+                  
 
                   return;
                 } else if (result.is_image == true && result.is_post == true) {
@@ -285,7 +321,9 @@ module.exports = {
 
                   urlImage = await downloadFileToNetwork (resGenerateImage);
 
-                  socket.emit('fileGenerate', { message: urlImage, type:"image" });
+                  
+
+                  socket.emit('fileGenerate', { message: urlImage, type:"image", });
 
                   await handleDatabaseOperations(info.message, response.text, sala, 'user', 'ia');
 

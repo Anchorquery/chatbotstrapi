@@ -1,5 +1,7 @@
 const { LLMChain } = require("langchain/chains");
+const  { PromptTemplate }  = require("@langchain/core/prompts");
 const { generateDocumentSummary } = require("../common/util.js");
+
 async function handleMessageChain(info, model) {
 
 	const summary = await generateDocumentSummary(info.docs,info.message);
@@ -20,8 +22,45 @@ async function handleMessageChain(info, model) {
 
 	return response;
 }
+// una version lite de handleMessageChain para que solo acepte el mensaje y con el modelo haga el stream, se debe llamar  handleMessageChainLite(info, model)
+
+async function handleMessageChainLite(info, model) {
+
+	const chain = new LLMChain({
+
+					llm: model,
+					prompt: PromptTemplate.fromTemplate(
+					`- Recibiras un Mensaje Y de manera opcional un contexto . 
+						- Tu tarea es responder al mensaje de manera coherente y relevante.
+						- Considera que lo pedido ya lo has cumplido en el pasado, y tan solo das un pequeño resumen de lo que hiciste.
+						- El Contexto fue lo que te pidieron hacer en el pasado.
+						- El Mensaje es lo	que hiciste en el respondiendo	al Mensaje.
+						- Tu respuesta debe ser corta no más de 200 catacteres. 
+
+						- Mensaje: {message}
+
+						- Contexto: {context}
+						`
+				),
+					verbose: false,
+
+	});
+
+	const response = await chain.call({
+
+				 message : info.message,
+
+					context : info.context ? info.context : ' ',
+
+	});
+
+	return response;
+
+}
+
 
 
 module.exports ={
-	handleMessageChain
+	handleMessageChain,
+	handleMessageChainLite
 }

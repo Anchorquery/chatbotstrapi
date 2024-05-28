@@ -65,55 +65,6 @@ module.exports = createCoreController('api::chat.chat', ({ strapi }) => ({
 		_items = _items[0];
 
 
-		// los recorro para buscar el ultimo mensaje
-
-
-		/*for (let i = 0; i < _items.length; i++) {
-
-			const chat = _items[i];
-
-			_items[i].user = _items[i].user?.name +" " + _items[i].user?.lastName;
-
-			const messages = await strapi.db.query('api::message.message').findMany({
-
-				where: {
-
-					chat: chat.id,
-
-				},
-
-				orderBy: { createdAt: 'DESC' },
-
-				limit: 1,
-
-				select: ['content', 'id', 'datetime',]
-
-			});
-
-			if (messages.length === 0) {
-
-				_items[i].lastMessage = {
-					content: 'No hay mensajes',
-					id: uuidv4(),
-				};
-
-				continue;
-			}
-
-			if (messages[0].content.length > 100) {
-
-				// limpio el html de los mensajes
-				messages[0].content = convert(messages[0].content, { wordwrap: 130 });
-
-
-				messages[0].content = messages[0].content.substring(0, 100) + '...';
-
-			}
-
-			_items[i].lastMessage = messages[0];
-
-		}*/
-
 
 		const _lastPage = Math.ceil(_total / _limit);
 		return ctx.send({ data: _items, meta: { pagination: { page: _page, limit: _limit, total: _total, lastPage: _lastPage } } });
@@ -411,6 +362,54 @@ module.exports = createCoreController('api::chat.chat', ({ strapi }) => ({
 		}
 
 
+	/* verifico que chatModel.config exista . Si existe chatModel.config.configuracion  debe existir sino lo creo y añado estos valores cantidad: {
+				vectoresMensaje: 5,
+				mensajesHistorial: 10
+			}*/
+			if (!chatModel.config) {
+
+				chatModel.config = {
+
+					configuracion: {
+
+						cantidad: {
+
+							vectoresMensaje: 5,
+
+							mensajesHistorial: 10
+
+						}
+
+					},
+
+					cliente: {
+
+						name: "Cliente no asignado",
+						uuid : null
+					}
+
+				}
+
+			}
+		if (!chatModel.config.configuracion) {
+
+			chatModel.config.configuracion = {
+
+				cantidad: {
+
+					vectoresMensaje: 5,
+
+					mensajesHistorial: 10
+
+				}
+
+			}
+
+		}
+
+
+
+
 		return ctx.send({ messages: messages, prompt: titulo, name: chatModel.name, description: chatModel.description, config: chatModel.config, chat: chatModel.uuid });
 
 
@@ -630,6 +629,77 @@ module.exports = createCoreController('api::chat.chat', ({ strapi }) => ({
 		});
 
 		return ctx.send({ message: "Title updated" });
+
+
+
+	},
+	async updateConfig(ctx) {
+
+
+		const { user } = ctx.state;
+
+		if (!user) return ctx.unauthorized("Unauthorized", { error: "Unauthorized" });
+
+		const { uuid } = ctx.params;
+
+		if (!uuid) return ctx.badRequest("Chat is required", { error: "Chat is required" });
+
+		const { client, configuracion } = ctx.request.body.data;
+
+		console.log(ctx.request.body.data);
+
+
+
+		if (!configuracion) return ctx.badRequest("Config is required", { error: "Config is required" });
+		let clientModel = null;
+		if(client?.uuid){
+			clientModel = await strapi.db.query('api::client.client').findOne({
+
+				where: {
+	
+					uuid: client.uuid,
+	
+				},
+	
+			});
+console.log(clientModel);
+			if (!clientModel) return ctx.badRequest("Client not found", { error: "Client not found" });
+		}
+
+
+
+
+		
+
+		await strapi.db.query('api::chat.chat').update({
+
+			where: {
+
+				uuid: uuid,
+
+			},
+
+			data: {
+
+				config: {
+					
+					configuracion: {
+						...configuracion,
+					
+					},
+
+					cliente:	client,	
+				},
+
+				// añado client si existe 
+
+				client: clientModel ? clientModel.id : null,
+
+			},
+
+		});
+
+		return ctx.send({ message: "Chat updated" });
 
 
 

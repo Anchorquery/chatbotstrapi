@@ -2,7 +2,7 @@ const { storeMessageInDatabase } = require("./storeMessageInDatabase");
 const clientS = require('../superbase-client.js');
 const Promise = require('bluebird');
 
-function handleDatabaseOperations(userMessage, aiMessage, sala, userType, aiType) {
+function handleDatabaseOperations(userMessage, aiMessage, sala, userType, aiType, file) {
     const dbConfig = {
         client: clientS,
         tableName: 'messages',

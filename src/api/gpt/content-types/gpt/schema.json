@@ -1,0 +1,51 @@
+{
+  "kind": "collectionType",
+  "collectionName": "gpts",
+  "info": {
+    "singularName": "gpt",
+    "pluralName": "gpts",
+    "displayName": "gpts",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "title": {
+      "type": "string"
+    },
+    "description": {
+      "type": "text"
+    },
+    "prompt": {
+      "type": "richtext"
+    },
+    "initialQuestion": {
+      "displayName": "initialQuestion",
+      "type": "component",
+      "repeatable": true,
+      "component": "campos-prompts.initial-question",
+      "max": 4
+    },
+    "config": {
+      "type": "json"
+    },
+    "client": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::client.client",
+      "inversedBy": "gpt"
+    },
+    "picture": {
+      "allowedTypes": [
+        "images",
+        "files",
+        "videos",
+        "audios"
+      ],
+      "type": "media",
+      "multiple": false
+    }
+  }
+}

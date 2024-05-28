@@ -34,13 +34,8 @@
       ],
       "default": "chat"
     },
-    "session": {
-      "type": "json",
-      "private": true
-    },
     "config": {
-      "type": "json",
-      "private": true
+      "type": "json"
     },
     "iaConfig": {
       "type": "json",
@@ -54,6 +49,11 @@
     },
     "lastModification": {
       "type": "datetime"
+    },
+    "client": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::client.client"
     }
   }
 }
