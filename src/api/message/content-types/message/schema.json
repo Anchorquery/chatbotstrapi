@@ -55,8 +55,17 @@
       },
       "customField": "plugin::ckeditor.CKEditor"
     },
+    "urlFile": {
+      "type": "string"
+    
+    },
+    "urlType": {
+      "type": "string"
+      
+    },
     "embedding": {
-      "type": "vector"
+      "type": "vector",
+      "configurable": false
     }
   }
 }

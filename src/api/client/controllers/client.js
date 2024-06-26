@@ -1,28 +1,28 @@
 'use strict';
 
 /**
- * client controller
- */
+	* client controller
+	*/
 
 const { createCoreController } = require('@strapi/strapi').factories;
 const { Promise } = require('bluebird');
 const { pop } = require('../../../../config/middlewares');
 
-module.exports = createCoreController('api::client.client' , ({ strapi }) => ({
+module.exports = createCoreController('api::client.client', ({ strapi }) => ({
 
 
-	async create (ctx){
+	async create(ctx) {
 
 
 		const { user } = ctx.state;
 
-		if (!user) return ctx.unauthorized("Unauthorized", {	message: 'Unauthorized' });	
+		if (!user) return ctx.unauthorized("Unauthorized", { message: 'Unauthorized' });
 
 		// recibo el mensaje del usuario
 
-		let {name , description, folder} = ctx.request.body.data;
+		let { name, description, folder } = ctx.request.body.data;
 
-		if (!name) return ctx.badRequest("Name required", {	message: 'Name required' });
+		if (!name) return ctx.badRequest("Name required", { message: 'Name required' });
 
 
 		// verifico no exista un cliente con el mismo nombre
@@ -30,12 +30,12 @@ module.exports = createCoreController('api::client.client' , ({ strapi }) => ({
 		const client = await strapi.db.query('api::client.client').findOne({
 			where: {
 				name: name,
-				user : user.id
+				user: user.id
 			}
 		});
 
 
-		if (client) return ctx.badRequest("Client already exists", {	message: 'Client already exists' });
+		if (client) return ctx.badRequest("Client already exists", { message: 'Client already exists' });
 
 		if (folder) {
 
@@ -56,8 +56,8 @@ module.exports = createCoreController('api::client.client' , ({ strapi }) => ({
 
 			folder = folderR.id;
 
-		}else{
-			
+		} else {
+
 			folder = null;
 		}
 
@@ -68,14 +68,14 @@ module.exports = createCoreController('api::client.client' , ({ strapi }) => ({
 				title: name,
 				description: description,
 				create: user.id,
-				typeFolder : client,
-				isFolder :true,
-				parent : folder
+				typeFolder: client,
+				isFolder: true,
+				parent: folder
 			}
 		});
 
 
-	let cliente =	await strapi.db.query('api::client.client').create({
+		let cliente = await strapi.db.query('api::client.client').create({
 			data: {
 				name: name,
 				description: description,
@@ -86,14 +86,34 @@ module.exports = createCoreController('api::client.client' , ({ strapi }) => ({
 
 		// actualizo el folder con el cliente
 
-		await strapi.db.query('api::document-file.document-file').update({
-			where: {
-				id: folderT.id
-			},
-			data: {
-				client: cliente.id
-			}
-		});
+
+
+
+		// creo un gpt 
+
+		;
+
+
+		Promise.allSettled([
+			await strapi.db.query('api::document-file.document-file').update({
+				where: {
+					id: folderT.id
+				},
+				data: {
+					client: cliente.id
+				}
+			}), await strapi.db.query('api::gpt.gpt').create({
+
+				data: {
+
+					title: `GPT ${name}`,
+					client: cliente.id,
+					state: 'draft',
+					creation_steps: "uno",
+				}
+			})]
+		);
+
 
 
 		return ctx.send({
@@ -102,18 +122,18 @@ module.exports = createCoreController('api::client.client' , ({ strapi }) => ({
 
 
 
-		
+
 
 	},
-	async findOne(ctx){
+	async findOne(ctx) {
 
 		const { user } = ctx.state;
 
-		if (!user) return ctx.unauthorized("Unauthorized", { error: "Unauthorized"});
+		if (!user) return ctx.unauthorized("Unauthorized", { error: "Unauthorized" });
 
 		let { id } = ctx.params;
 
-		if (!id) return ctx.badRequest("Client is required", { error: "Client is required"});
+		if (!id) return ctx.badRequest("Client is required", { error: "Client is required" });
 
 		const client = await strapi.db.query('api::client.client').findOne({
 			where: {
@@ -122,7 +142,7 @@ module.exports = createCoreController('api::client.client' , ({ strapi }) => ({
 			}
 		});
 
-		if (!client) return ctx.badRequest("Client not found", { error: "Client not found"});
+		if (!client) return ctx.badRequest("Client not found", { error: "Client not found" });
 
 		return ctx.send({
 			message: 'Client found',
@@ -149,25 +169,25 @@ module.exports = createCoreController('api::client.client' , ({ strapi }) => ({
 		let where = {};
 
 		if (_type !== null && _type !== undefined && _type !== "null" && _type) {
-						where.type = _type;
+			where.type = _type;
 		}
 
 		if (_isMe) {
-						where.user = user.id;
+			where.user = user.id;
 		}
 
 		if (_q) {
-						where.name = {
-										$containsi: _q
-						};
+			where.name = {
+				$containsi: _q
+			};
 		}
 
 		_items = await strapi.db.query('api::client.client').findWithCount({
-						limit: _limit,
-						offset: _offset,
-						where: where,
-						orderBy: { name: 'asc' },
-						
+			limit: _limit,
+			offset: _offset,
+			where: where,
+			orderBy: { name: 'asc' },
+
 		});
 
 		const _total = _items[1];
@@ -177,199 +197,217 @@ module.exports = createCoreController('api::client.client' , ({ strapi }) => ({
 
 		const _lastPage = Math.ceil(_total / _limit);
 		return ctx.send({ data: _items, meta: { pagination: { page: _page, limit: _limit, total: _total, lastPage: _lastPage } } });
-},
+	},
 
-async delete(ctx) {
+	async delete(ctx) {
 
-	// verifico este logueado
+		// verifico este logueado
 
-	const { user } = ctx.state;
+		const { user } = ctx.state;
 
-	if (!user) return ctx.unauthorized("Unauthorized", { error: "Unauthorized" });
-
-
-	// saco el id del chat
-
-	const { id } = ctx.params;
-
-	if (!id) return ctx.badRequest("Client is required", { error: "Client is required" });
+		if (!user) return ctx.unauthorized("Unauthorized", { error: "Unauthorized" });
 
 
-	// busco el chat en la base de datos
+		// saco el id del chat
+
+		const { id } = ctx.params;
+
+		if (!id) return ctx.badRequest("Client is required", { error: "Client is required" });
 
 
-	const clientModel = await strapi.db.query('api::client.client').findOne({
-
-		where: {
-
-			uuid: id,
-			user: user.id
-
-		},
-
-		populate : ['folder']
+		// busco el chat en la base de datos
 
 
+		const clientModel = await strapi.db.query('api::client.client').findOne({
 
-	});
+			where: {
 
-	if (!clientModel) return ctx.badRequest("Chat not found", { error: "Chat not found" });
+				uuid: id,
+				user: user.id
 
+			},
 
-	/// busco su carpeta y la elimino
-
-	await strapi.db.query('api::document-file.document-file').delete({
-
-		where: {
-
-			id: clientModel.folder.id
-
-		},
-
-	});
-
-
-	await strapi.db.query('api::client.client').delete({
-
-		where: {
-
-			uuid: id,
-
-		},
-
-	});
-
-	return ctx.send({ message: "Chat deleted" });
-
-},
-async findOnePerfil(ctx){
-
-	const { user } = ctx.state;
-
-	if (!user) return ctx.unauthorized("Unauthorized", { error: "Unauthorized"});
-
-	let { uuid } = ctx.params;
-
-	if (!uuid) return ctx.badRequest("Client is required", { error: "Client is required"});
-
-	const client = await strapi.db.query('api::client.client').findOne({
-		where: {
-			uuid: uuid,
-			//user: user.id,
-			
-		},
-		populate: ['folder','picture']
-	});
-
-	if (!client) return ctx.badRequest("Client not found", { error: "Client not found"});
-
-
-	client.picture = client.picture ? process.env.URL + client.picture.url : '/assets/img/Front/upload-image.png';
-
-	return ctx.send({
-		...client
-	});
-
-
-},
-
-async updateClient(ctx){
-
-
-	const { user } = ctx.state;
-
-	if (!user) return ctx.unauthorized("Unauthorized", {	error: "Unauthorized" });
-
-	let { uuid } = ctx.params;
-
-	if (!uuid) return ctx.badRequest("Client is required", { error: "Client is required" });
-
-	let { name, description, siteUrl,direction,telefono,contactPerson,contactEmail  } = ctx.request.body.data;
-
-	if (!name) return ctx.badRequest("Name required", { error: "Name required" });
-
-	const client = await strapi.db.query('api::client.client').findOne({
-		where: {
-			uuid: uuid,
-			user: user.id
-		},
-		populate: ['folder']
-
-	});
+			populate: ['folder', 'gpt']
 
 
 
+		});
 
-	if (!client) return ctx.badRequest("Client not found", { error: "Client not found" });
+		if (!clientModel) return ctx.badRequest("Chat not found", { error: "Chat not found" });
 
-	// actualizo el folder
+		if	(clientModel.folder) {
 
+			await strapi.db.query('api::document-file.document-file').delete({
 
-	const [documentFileResult, clientResult] = await Promise.all([
-		strapi.db.query('api::document-file.document-file').update({
 				where: {
-						id: client.folder.id
+
+					parent: clientModel.folder.id
+
 				},
-				data: {
-						title: name,
-				}
-		}),
-		strapi.db.query('api::client.client').update({
+
+			})
+
+		}
+
+		
+		if(clientModel.gpt){
+			await strapi.db.query('api::gpt.gpt').delete({
+
 				where: {
-						uuid: client.uuid
-				},
-				data: {
-						name: name,
-						description:  description,
-						siteUrl:  siteUrl,
-						direction: direction,
-						telefono:  telefono,
-						contactPerson: contactPerson,
-						contactEmail:  contactEmail
-				}
-		})
-]);
-
-	return ctx.send({
-		message: 'Client updated',
-	});
-
-
-},
-
-async updateLogo(ctx){
 	
-	const { user } = ctx.state;
-
-	if (!user) return ctx.unauthorized("Unauthorized", { error: "Unauthorized" });
-
-	let { uuid } = ctx.params;
-
-	if (!uuid) return ctx.badRequest("Client is required", { error: "Client is required" });
-
-	const client = await strapi.db.query('api::client.client').findOne({
-		where: {
-			uuid: uuid,
-			user: user.id
-		},
-		populate: ['folder']
-
-	});
-
-	if (!client) return ctx.badRequest("Client not found", { error: "Client not found" });
-
-	const { logo } = ctx.request.files;
-
-	if (!logo) return ctx.badRequest("Logo is required", { error: "Logo is required" });
+					id: clientModel.gpt.id
+	
+				},
+	
+			})
+		}
 
 
-	console.log(logo);
 
-	return ctx.send({
-		message: 'Client updated',
-	});
+		await strapi.db.query('api::client.client').delete({
 
-},
+			where: {
+
+				uuid: id,
+
+			},
+
+		})
+
+
+
+
+		return ctx.send({ message: "Chat deleted" });
+
+	},
+	async findOnePerfil(ctx) {
+
+		const { user } = ctx.state;
+
+		if (!user) return ctx.unauthorized("Unauthorized", { error: "Unauthorized" });
+
+		let { uuid } = ctx.params;
+
+		if (!uuid) return ctx.badRequest("Client is required", { error: "Client is required" });
+
+		const client = await strapi.db.query('api::client.client').findOne({
+			where: {
+				uuid: uuid,
+				//user: user.id,
+
+			},
+			populate: ['folder', 'picture', 'gpt']
+		});
+
+		if (!client) return ctx.badRequest("Client not found", { error: "Client not found" });
+
+
+		client.picture = client.picture ? process.env.URL + client.picture.url : '/assets/img/Front/upload-image.png';
+
+		return ctx.send({
+			...client
+		});
+
+
+	},
+
+	async updateClient(ctx) {
+
+
+		const { user } = ctx.state;
+
+		if (!user) return ctx.unauthorized("Unauthorized", { error: "Unauthorized" });
+
+		let { uuid } = ctx.params;
+
+		if (!uuid) return ctx.badRequest("Client is required", { error: "Client is required" });
+
+		let { name, description, siteUrl, direction, telefono, contactPerson, contactEmail } = ctx.request.body.data;
+
+		if (!name) return ctx.badRequest("Name required", { error: "Name required" });
+
+		const client = await strapi.db.query('api::client.client').findOne({
+			where: {
+				uuid: uuid,
+				user: user.id
+			},
+			populate: ['folder']
+
+		});
+
+
+
+
+		if (!client) return ctx.badRequest("Client not found", { error: "Client not found" });
+
+		// actualizo el folder
+
+
+		const [documentFileResult, clientResult] = await Promise.all([
+			strapi.db.query('api::document-file.document-file').update({
+				where: {
+					id: client.folder.id
+				},
+				data: {
+					title: name,
+				}
+			}),
+			strapi.db.query('api::client.client').update({
+				where: {
+					uuid: client.uuid
+				},
+				data: {
+					name: name,
+					description: description,
+					siteUrl: siteUrl,
+					direction: direction,
+					telefono: telefono,
+					contactPerson: contactPerson,
+					contactEmail: contactEmail
+				}
+			})
+		]);
+
+		return ctx.send({
+			message: 'Client updated',
+		});
+
+
+	},
+
+	async updateLogo(ctx) {
+
+		const { user } = ctx.state;
+
+		if (!user) return ctx.unauthorized("Unauthorized", { error: "Unauthorized" });
+
+		let { uuid } = ctx.params;
+
+		if (!uuid) return ctx.badRequest("Client is required", { error: "Client is required" });
+
+		const client = await strapi.db.query('api::client.client').findOne({
+			where: {
+				uuid: uuid,
+				user: user.id
+			},
+			populate: ['folder']
+
+		});
+
+		if (!client) return ctx.badRequest("Client not found", { error: "Client not found" });
+
+		const { logo } = ctx.request.files;
+
+		if (!logo) return ctx.badRequest("Logo is required", { error: "Logo is required" });
+
+
+		console.log(logo);
+
+		return ctx.send({
+			message: 'Client updated',
+		});
+
+	},
 
 
 

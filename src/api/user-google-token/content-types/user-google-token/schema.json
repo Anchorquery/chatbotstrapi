@@ -4,7 +4,8 @@
   "info": {
     "singularName": "user-google-token",
     "pluralName": "user-google-tokens",
-    "displayName": "user_google_tokens"
+    "displayName": "user_google_tokens",
+    "description": ""
   },
   "options": {
     "draftAndPublish": true
@@ -17,19 +18,19 @@
       "target": "plugin::users-permissions.user"
     },
     "access_token": {
-      "type": "string"
+      "type": "text"
     },
     "refresh_token": {
-      "type": "string"
+      "type": "text"
     },
     "scope": {
-      "type": "string"
+      "type": "text"
     },
     "token_type": {
       "type": "string"
     },
     "id_token": {
-      "type": "string"
+      "type": "text"
     },
     "expiry_date": {
       "type": "string"

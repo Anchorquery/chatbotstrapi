@@ -9,7 +9,7 @@ const { ChatOpenAI } = require("langchain/chat_models/openai");
 const { CallbackManager } = require("langchain/callbacks");
 const Promise = require('bluebird');
 const { OpenAIEmbeddings } = require("langchain/embeddings/openai");
-const { verificarPeticion } = require('../util/common/util');
+const { verificarPeticion, verificarPeticionDeImagen } = require('../util/common/util');
 
 const { summarizeLongDocument } = require("../util/summarizer");
 const SupabaseVectorStoreCustom = require("../util/supabase");
@@ -24,6 +24,7 @@ const { handlePostImage } = require("../util/chat/handlePostImage");
 const { downloadFileToNetwork } = require("../util/common/bufferToFile");
 const { processImageMessage } = require("../util/chat/handleFileMessage");
 const { ProgressSimulator } = require("../util/common/progressSimulator");
+const { handleMessageChainCreate } = require("../util/gpt/handleMessageCreate");
 
 const { OPENAI_API_KEY } = process.env;
 let { URL } = process.env;
@@ -200,10 +201,10 @@ module.exports = {
 
           socket.on('message', async (data) => {
             try {
-              
+
               let { type, sala, message, tone, language, chatModel } = data;
               let urlImage = null;
-console.log(data)
+              console.log(data)
               if (!message) {
 
                 socket.emit('errorMessage', { message: 'Mensaje no encontrado' });
@@ -218,11 +219,11 @@ console.log(data)
               // verifico si sala está vacio o es un objeto vacio
 
 
-              if (!sala || Object.keys(sala).length === 0){
+              if (!sala || Object.keys(sala).length === 0) {
 
                 // creo un nuevo chat
                 sala = uuidv4();
-                let nameSala =new Date().toISOString().split('T')[0] + ' Untitled'
+                let nameSala = new Date().toISOString().split('T')[0] + ' Untitled'
                 await strapi.db.query('api::chat.chat').create({
 
                   data: {
@@ -231,19 +232,19 @@ console.log(data)
                     user: socket.user.id,
                     uuid: sala,
                     // nombre de la forma 2024-02-21 Untitled
-                    name:  nameSala,
+                    name: nameSala,
                     lastMessage: convert(message, {
 
                       wordwrap: 130
-      
+
                     }),
 
 
                   }
 
                 })
-                socket.emit('newChat', { sala,name:nameSala })
-              }else{
+                socket.emit('newChat', { sala, name: nameSala })
+              } else {
 
                 //verifico que sala no sea string
 
@@ -268,52 +269,48 @@ console.log(data)
 
                   const simulator = new ProgressSimulator(socket);
                   simulator.start()
-                  .then(message => {
-                    console.log(message);
-                  })
+                    .then((message) => {
+                      console.log(message);
+                    })
+                    .catch((error) => {
+                      console.error(error.message);
+                    });
                   let resGenerateImage = await generateImageFromPrompt("", message);
 
 
-                  urlImage = await downloadFileToNetwork (resGenerateImage);
+                  urlImage = await downloadFileToNetwork(resGenerateImage);
 
                   if (urlImage.error) {
                     socket.emit('errorMessage', { message: urlImage.message });
                     return;
                   }
 
-                  socket.emit('fileGenerate', { message: urlImage, type:"image",accion:"stop", uuid: uuidv4()});
+                  socket.emit('fileGenerate', { message: urlImage, type: "image", accion: "stop", uuid: uuidv4() });
 
-                  ///let model = initializeChatModel(chatModel?.modelName, sala, socket, null);
-
-                  const newRes =await processImageMessage(urlImage.file, message,null, true);
+                  const newRes = await processImageMessage(urlImage.file, message, null, true);
 
                   if (newRes.error) {
 
                     socket.emit('errorMessage', { message: newRes.message });
- 
+
                     return;
 
                   }
-                
-
-
-
-                  //await  handleMessageChainLite({message:newRes.message , context :message}, model);
 
                   simulator.cancel();
 
-                  await handleDatabaseOperations(message, "Imagen generada correctamente" , sala, 'user', 'ia',urlImage.file);
-	                
+                  await handleDatabaseOperations({ url: null, type: null, sender: "user", text: message }, { url: urlImage.file, type: "image", sender: "ia", text: 'Imgen Generada' }, sala, 'user', 'ia');
 
 
-                  
+
+
 
                   return;
                 } else if (result.is_image == true && result.is_post == true) {
                   data.result = result;
 
                   let model = initializeChatModel(chatModel?.modelName, sala, socket, null);
-                  let info =await handlePostImage(data, sala, socket);
+                  let info = await handlePostImage(data, sala, socket);
 
                   let response = await handleMessageChain(info, model);
 
@@ -321,13 +318,13 @@ console.log(data)
 
                   let resGenerateImage = await generateImageFromPrompt(response.text, message);
 
-                  urlImage = await downloadFileToNetwork (resGenerateImage);
+                  urlImage = await downloadFileToNetwork(resGenerateImage);
 
-                  
 
-                  socket.emit('fileGenerate', { message: urlImage, type:"image", });
 
-                  await handleDatabaseOperations(info.message, response.text, sala, 'user', 'ia');
+                  socket.emit('fileGenerate', { message: urlImage, type: "image", });
+
+                  await handleDatabaseOperations({ url: null, type: null, sender: "user", text: info.message }, { url: null, type: null, sender: "ia", text: response.text }, sala, 'user', 'ia');
 
                   return;
                 } else if (result.is_url) {
@@ -344,11 +341,11 @@ console.log(data)
                     socket.emit('errorMessage', { message: response.message });
                     return
                   }
-                  socket.emit('fileGenerate', { message: message, type:"url", file:result.url });
+                  socket.emit('fileGenerate', { message: message, type: "url", file: result.url });
 
-                  await handleDatabaseOperations(message, response.message, sala, 'user', 'ia');
+                  await handleDatabaseOperations({ url: null, type: null, sender: "user", text: message }, { url: null, type: null, sender: "ia", text: response.message }, sala, 'user', 'ia');
 
-                  
+
                   return
 
 
@@ -372,7 +369,7 @@ console.log(data)
                 let response = await handleMessageChain(info, model);
 
                 // Manejar las operaciones de la base de datos
-                await handleDatabaseOperations(info.message, response.text, sala, 'user', 'ia');
+                await handleDatabaseOperations({ url: null, type: null, sender: "user", text: info.message }, { url: null, type: null, sender: "ia", text: response.text }, sala, 'user', 'ia');
                 return;
               }
 
@@ -462,17 +459,55 @@ console.log(data)
                 return;
               }
               else if (type == 'file') {
-                let info = await handleFileMessage(data);
+
+                if (await verificarPeticionDeImagen(convert(message, {
+                  wordwrap: 130
+                }))) {
+
+
+                  const simulator = new ProgressSimulator(socket);
+                  simulator.start(36000)
+                    .then((message) => {
+                      console.log(message);
+                    })
+                    .catch((error) => {
+                      console.error(error.message);
+                    });
+                  var info = await handleFileMessage(data);
+
+                  console.log(info)
+
+
+                  if (info.error) {
+
+                    socket.emit('errorMessage', { message: info.message });
+                    simulator.cancel();
+                    return;
+                  }
+
+
+                  socket.emit('fileGenerate', { message: info.urlFileIA, type: "image", accion: "stop", uuid: uuidv4() });
+                  simulator.cancel();
+                  await handleDatabaseOperations({ url: info.urlFileUser, type: "image", sender: "user", text: data.message }, { url: info.urlFileIA, type: info.typeIA, sender: "ia", text: "Imagen generada" }, sala, 'user', 'ia');
+
+                  return;
+
+                } else {
+                  var info = await handleFileMessage(data, true, socket, sala);
+                }
+
 
 
                 if (info.error) {
                   socket.emit('errorMessage', { message: info.message });
                 }
 
-                // necesito mandar el mensaje 
 
 
-                console.log(info);
+                await handleDatabaseOperations({ url: info.urlFile, type: "image", sender: "user", text: data.message }, { url: null, type: null, sender: "ia", text: info.message }, sala, 'user', 'ia');
+
+
+                return;
 
               }
               else {
@@ -488,10 +523,150 @@ console.log(data)
           });
 
 
+          socket.on('crearGpt', async (data) => {
+
+            try {
+              const simulator = new ProgressSimulator(socket);
+              simulator.start()
+              .then((message) => {
+                console.log(message);
+              })
+              .catch((error) => {
+                console.error('Error:', error.message);
+              });
+
+              const { user } = socket;
+
+              let { message, idGpt, client, state, creation_steps, clientName } = data;
+
+
+              if (!message) {
+
+                socket.emit('errorMessage', { message: 'Mensaje no encontrado' });
+
+                return;
+
+              }
+
+              if (!client) {
+
+                socket.emit('errorMessage', { message: 'Cliente no encontrado' });
+
+                return;
+
+              }
+
+
+              /* si el paso es uno entonces se desea crear el gpt, necesito lo sigueinte:
+     
+               - Genera una descripcion en base al mensaje. 
+     
+               - Crea instrucciones en base al mensaje
+     
+               - Crea 4 inciadores de conversacion en base al mensaje
+     
+               - todo retornado en formato json
+              
+              */
+
+
+
+
+                let prompt = `Genera una descripción, instrucciones y cuatro iniciadores de conversación en formato JSON basado en el MENSAJE, el NOMBRE_CLIENTE y un CONTEXTO opcional. Asegúrate de que las instrucciones sean claras y detalladas, si se pasa un NOMBRE_CLIENTE , gira todo alrededor de ello  y que el formato JSON siga el ejemplo proporcionado.
+
+          MENSAJE: Un asistente de programación.
+          
+          NOMBRE_CLIENTE: Fagor Automotation
+          
+          CONTEXTO: 
+          
+          Descripción: Ayuda a programar con sugerencias y explicaciones claras.
+          
+          Instrucciones: Ayuda a los usuarios a programar proporcionando sugerencias de código, soluciones a errores, y explicaciones de conceptos de programación. Puede trabajar con varios lenguajes de programación y está diseñado para ser claro y conciso en sus respuestas. Siempre está dispuesto a proporcionar ejemplos prácticos y guiar a los usuarios a través de los problemas paso a paso. Mantiene un tono amigable y profesional.
+          
+          Iniciadores de conversación:
+          
+          1- ) ¿Cómo puedo arreglar este error en mi código?
+          2- ) ¿Puedes darme un ejemplo de un bucle en Python?
+          3- ) ¿Cómo funciona la recursión en C++?
+          4- ) ¿Qué es una clase en Java?
+          
+          El formato JSON de la salida debe ser el siguiente:
+          
+        
+          
+            "descripcion": "Ayuda a programar con sugerencias y explicaciones claras.",
+            "instrucciones": "Ayuda a los usuarios a programar proporcionando sugerencias de código, soluciones a errores, y explicaciones de conceptos de programación. Puede trabajar con varios lenguajes de programación y está diseñado para ser claro y conciso en sus respuestas. Siempre está dispuesto a proporcionar ejemplos prácticos y guiar a los usuarios a través de los problemas paso a paso. Mantiene un tono amigable y profesional.",
+            "iniciadores_de_conversacion": [
+              "¿Cómo puedo arreglar este error en mi código?",
+              "¿Puedes darme un ejemplo de un bucle en Python?",
+              "¿Cómo funciona la recursión en C++?",
+              "¿Qué es una clase en Java?"
+            ]
+          
+          
+          Acá los datos:
+
+
+          MENSAJE: {message}
+
+          NOMBRE_CLIENTE: {clientName}
+
+          CONTEXTO: {context}
+          
+          `;
+
+
+                // inicio el modelo
+
+                let model = initializeChatModel('gpt-4o-2024-05-13', null, socket, null, { temperature: 0.7 });
+
+
+                let response = await handleMessageChainCreate({ message, context: "", client, clientName, prompt }, model);
+
+
+                // actualizo el estado del gpt
+
+
+                let gptData = await strapi.db.query('api::gpt.gpt').update({
+
+                  where: {
+                    id: idGpt
+                  },
+                  data: {
+                    prompt: response.instrucciones,
+                    creation_steps: "dos",
+                    description: response.descripcion,
+                    conversation_starters: response.iniciadores_de_conversacion,
+                    state: "published"
+                  }
+
+                });
+
+
+                // emito el mensaje de respuesta
+
+                socket.emit('crearResponseGpt', { message: "Gpt creado exitiosamente. Vaya a la pesataña de configuracion o envie otro mensaje para regenerarlo", data: gptData });
+                // cancelo simulador
+
+
+              simulator.cancel();
+            } catch (error) {
+              console.error('Error handling message:', error);
+            }
+
+
+
+
+
+
+          });
+
+
           socket.on('disconnect', async (reason) => {
             strapi.log.debug(`Cliente ${socket.id} se ha desconectado`);
 
-       
+
 
 
 

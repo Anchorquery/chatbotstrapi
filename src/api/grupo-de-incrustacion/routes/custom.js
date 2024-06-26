@@ -36,6 +36,14 @@ module.exports = {
 					middlewares: [],
 			},
 	},
-		
+	{
+		method: "POST",
+		path: "/grupos-incrustacion/incrustar-archivo-drive",
+		handler: "custom.incrustarDedeDrive",
+		config: {
+				policies: [],
+				middlewares: [],
+		},
+},
 	],
 };

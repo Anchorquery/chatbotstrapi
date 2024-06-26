@@ -88,6 +88,9 @@ module.exports = class SupabaseVectorStoreCustom extends VectorStore {
                     chat: options.chat,
                     type: 'text',
                     metadata : options.metadata,
+
+                    urlFile : options.file ? options.file.url : "",
+                    urlType : options.file ? options.file.type : "",
                    
 
                 }));
@@ -151,6 +154,9 @@ module.exports = class SupabaseVectorStoreCustom extends VectorStore {
                     sender : chunk[0].sender,
                     type: chunk[0].type,
                     metadata : chunk[0].metadata,
+                    url_file : chunk[0].urlFile,
+                    url_type : chunk[0].urlType,
+
 
                 }).select();
 

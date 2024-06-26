@@ -1,5 +1,6 @@
 const { convert } = require('html-to-text');
 const { ChatOpenAI } = require("langchain/chat_models/openai");
+const { CallbackManager } = require("langchain/callbacks");
 const { HumanMessage } = require("@langchain/core/messages");
 const { generateImageFromPrompt } = require('../common/imageGenerator');
 const { verificarPeticionDeImagen, verificarRespuestaNoDisponible, verificarYTraducirMensajeDeError } = require('../common/util');
@@ -7,6 +8,7 @@ const { documentosNoEstructurados } = require('../loader/Unstructured');
 const { bufferToFile } = require('../common/bufferToFile');
 const axios = require('axios').default;
 const { v4: uuid } = require('uuid');
+const { summarizeLongDocument } = require('../summarizer');
 /*
 Descripción:
 handleFileMessage gestiona el procesamiento de mensajes que contienen archivos, manejando distintos tipos de archivos y aplicando la lógica necesaria para cada tipo.
@@ -27,63 +29,75 @@ Captura y maneja errores durante el procesamiento, devolviendo un objeto de erro
 
 */
 
-async function handleFileMessage(data) {
+async function handleFileMessage(data, stream = false, socket = null, sala = null) {
     try {
         let { fileBlob, message } = data;
-            
         message = convert(message, { wordwrap: 130 });
 
+        const { fileTypeFromBuffer } = await import('file-type');
+        const fileBuffer = Buffer.from(fileBlob.blob);
+        const type = await fileTypeFromBuffer(fileBuffer);
+        
+        const file = {
+            name: fileBlob.name,
+            mime: type.mime,
+            ext: type.ext,
+            size: fileBuffer.length,
+            hash: `${uuid()}_${fileBlob.name}`
+        };
+
+        const bufferToMedia = await bufferToFile(fileBuffer, file);
+        const mediaUpload = await strapi.plugin('upload').service('upload').uploadFileAndPersist(bufferToMedia);
+        await strapi.query("plugin::upload.file").create({ data: bufferToMedia });
+
         if (fileBlob.type === 'application/pdf') {
-
-            const { fileTypeFromBuffer } = await import('file-type');
-            const fileBuffer = Buffer.from(fileBlob.blob);
-
-            const type = await fileTypeFromBuffer(fileBuffer);
-
-
-            let file = {
-
-                name: fileBlob.name,
-                mime: type.mime,
-                ext: type.ext,
-                size: fileBuffer.length,
-                hash: uuid() + '_' + fileBlob.name
-            }
-
-            const bufferToMedia = await bufferToFile(fileBuffer, file);
-
-            const mediaUpload = await strapi.plugin('upload').service('upload').uploadFileAndPersist(bufferToMedia);
-
-            await strapi.query("plugin::upload.file").create({ data: bufferToMedia });
-
-
-
-
-
-            const documents = await documentosNoEstructurados("./public/" + mediaUpload.url);
-
+            const documents = await documentosNoEstructurados(`./public/${mediaUpload.url}`);
             const contenidoCompleto = documents.map(doc => doc.pageContent).join(' ');
 
-            // corto el contenido si es muy largo
-
             // @ts-ignore
-            const summary = contenidoCompleto.length > process.env.LIMIT_DOCUMENT_CHARACTERS_MATH ? await summarizeLongDocument({ document: contenidoCompleto, inquiry: message }) :  contenidoCompleto;
+            const summary = contenidoCompleto.length > process.env.LIMIT_DOCUMENT_CHARACTERS_MATH 
+                // @ts-ignore
+                ? await summarizeLongDocument({ document: contenidoCompleto, inquiry: message }) 
+                : contenidoCompleto;
 
+            return { error: false, message: summary };
+        } 
 
-            return {
-                error: false,
-                message: summary
+        if (fileBlob.type.startsWith('image/')) {
+            const response = await processImageMessage(fileBlob, message, null, false, stream, socket, sala);
+            response.urlFileUser = `${process.env.URL}${mediaUpload.url}`;
+            response.typeUser = 'image';
+
+            if (response.messageImage) {
+                const response2 = await axios.get(response.messageImage, { responseType: 'arraybuffer' });
+                const newFileBuffer = Buffer.from(response2.data);
+                const newType = await fileTypeFromBuffer(newFileBuffer);
+                
+                const newFile = {
+                    name: fileBlob.name,
+                    mime: newType.mime,
+                    ext: newType.ext,
+                    size: newFileBuffer.length,
+                    hash: `${uuid()}_${fileBlob.name}`
+                };
+
+                const newBufferToMedia = await bufferToFile(newFileBuffer, newFile);
+                const newMediaUpload = await strapi.plugin('upload').service('upload').uploadFileAndPersist(newBufferToMedia);
+                await strapi.query("plugin::upload.file").create({ data: newBufferToMedia });
+
+                response.urlFileIA = `${process.env.URL}${newMediaUpload.url}`;
+                response.typeIA = 'image';
             }
 
-        } else if (fileBlob.type.startsWith('image/')) {
-            const response = await processImageMessage(fileBlob, message);
             return response;
         }
+
+        throw new Error('Unsupported file type');
     } catch (error) {
         return {
             error: true,
             message: verificarYTraducirMensajeDeError(error.message)
-        }
+        };
     }
 }
 
@@ -112,7 +126,7 @@ Consideraciones Adicionales:
 Asegúrate de que los permisos y configuraciones necesarias para escribir archivos en el servidor estén correctamente establecidos.
 Manejo de errores robusto para asegurar que cualquier fallo en la comunicación con el modelo de IA o en la generación de la imagen sea adecuadamente reportado.
 */
-async function processImageMessage(fileBlob, message, instruccion = null, helper=false) {
+async function processImageMessage(fileBlob, message, instruccion = null, helper=false, stream = false, socket = null, sala = null) {
 
     // verifico si fileBlob es un buffer o un string(url de la imagen)
 
@@ -136,10 +150,33 @@ async function processImageMessage(fileBlob, message, instruccion = null, helper
         wordwrap: 130
     });
 
-    const chat = new ChatOpenAI({
-        modelName: "gpt-4-vision-preview",
-        maxTokens: 1024,
-    });
+    if(stream){
+
+        var chat = new ChatOpenAI({
+            modelName: "gpt-4-vision-preview",
+            //maxTokens: 1024,
+            maxTokens: 300,
+            streaming: true,
+            callbackManager: CallbackManager.fromHandlers({
+                async handleLLMNewToken(token) {
+                    socket.emit('messageResponse', { message: token });
+                },
+                async handleLLMEnd(result) {
+                    socket.emit('messageEnd', { message: result, source: [], uuid: uuid(), sala: sala, urlImage: imgSrc });
+                }
+            }),
+        });
+
+    }else{
+        var chat = new ChatOpenAI({
+            modelName: "gpt-4-vision-preview",
+            //maxTokens: 1024,
+            maxTokens: 300,
+    
+        });
+    }
+
+
 
     const prompt = new HumanMessage({
         content: [

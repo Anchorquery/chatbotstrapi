@@ -1,52 +1,47 @@
 class ProgressSimulator {
-	constructor(socket, type = "image") {
-		this.progress = 0;
-		this.intervalId = null;
-		this.isCancelled = false;
-		this.socket = socket;
-		this.type = type;
+	constructor(socket = null, type = "image") {
+			this.progress = 0;
+			this.intervalId = null;
+			this.isCancelled = false;
+			this.socket = socket;
+			this.type = type;
 	}
 
-	start(interval = 100) {
-		return new Promise((resolve, reject) => {
-			this.intervalId = setInterval(() => {
-				if (this.isCancelled) {
-					clearInterval(this.intervalId);
-					reject(new Error('Carga cancelada'));
-					return;
-				}
+	start(totalDuration = 30000) {
+			return new Promise((resolve, reject) => {
+					const interval = totalDuration / 100;
 
-				this.progress += 1;
-				this.socket.emit('porcentaje_carga', { message: this.progress , type: this.type});
+					this.intervalId = setInterval(() => {
+							try {
+									if (this.isCancelled) {
+											clearInterval(this.intervalId);
+											reject(new Error('Carga cancelada'));
+											return;
+									}
 
+									this.progress += 1;
+									if (this.socket) {
+											this.socket.emit('porcentaje_carga', { message: this.progress, type: this.type });
+									}
 
-				if (this.progress >= 100) {
-					clearInterval(this.intervalId);
-					resolve('Carga completa');
-				}
-			}, interval);
-		});
+									if (this.progress >= 100) {
+											clearInterval(this.intervalId);
+											
+											resolve('Carga completa');
+									}
+							} catch (error) {
+									clearInterval(this.intervalId);
+									reject(error);
+							}
+					}, interval);
+			});
 	}
 
 	cancel() {
-		this.isCancelled = true;
+		this.socket.emit('porcentaje_carga', { message: 100, type: this.type });
+			this.isCancelled = true;
+			
 	}
 }
 
-// Ejemplo de uso
-//const simulator = new ProgressSimulator();
-
-module.exports = {ProgressSimulator};
-
-/*simulator.start()
-	.then(message => {
-		console.log(message);
-	})
-	.catch(error => {
-		console.error(error.message);
-	});
-
-// Cancelar después de 3 segundos
-setTimeout(() => {
-	simulator.cancel();
-}, 3000);*/
+module.exports = { ProgressSimulator };

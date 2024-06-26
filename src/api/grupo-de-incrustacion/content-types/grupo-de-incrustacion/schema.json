@@ -88,6 +88,13 @@
       "relation": "manyToMany",
       "target": "api::tag.tag",
       "inversedBy": "grupos"
+    },
+    "drive": {
+      "type": "boolean",
+      "default": false
+    },
+    "remote_url": {
+      "type": "string"
     }
   }
 }

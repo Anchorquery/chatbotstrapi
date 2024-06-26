@@ -21,13 +21,6 @@
     "prompt": {
       "type": "richtext"
     },
-    "initialQuestion": {
-      "displayName": "initialQuestion",
-      "type": "component",
-      "repeatable": true,
-      "component": "campos-prompts.initial-question",
-      "max": 4
-    },
     "config": {
       "type": "json"
     },
@@ -38,14 +31,33 @@
       "inversedBy": "gpt"
     },
     "picture": {
+      "type": "media",
+      "multiple": false,
+      "required": false,
       "allowedTypes": [
         "images",
         "files",
         "videos",
         "audios"
-      ],
-      "type": "media",
-      "multiple": false
+      ]
+    },
+    "state": {
+      "type": "enumeration",
+      "enum": [
+        "draft",
+        "published"
+      ]
+    },
+    "creation_steps": {
+      "type": "enumeration",
+      "enum": [
+        "uno",
+        "dos",
+        "tres"
+      ]
+    },
+    "conversation_starters": {
+      "type": "json"
     }
   }
 }
