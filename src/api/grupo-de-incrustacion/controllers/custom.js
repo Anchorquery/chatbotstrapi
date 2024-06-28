@@ -226,7 +226,7 @@ module.exports = createCoreController('api::grupo-de-incrustacion.grupo-de-incru
 		if (_isMe === true || _isMe === 'true') where.create = user.id;
 		if (_isInfobase === true || _isInfobase === 'true') where.infobase = _isInfobase;
 		if (_state && _state !== 'null') where.queueState = _state;
-		
+		if (_client) where.client = _client;
 		if (_q) where.title = { $containsi: _q };
 
 		const _offset = (_page - 1) * _limit;
