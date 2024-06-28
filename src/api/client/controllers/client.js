@@ -79,7 +79,12 @@ module.exports = createCoreController('api::client.client', ({ strapi }) => ({
 				name: name,
 				description: description,
 				user: user.id,
-				folder: folderT.id
+				folder: folderT.id,
+				carpeta :{
+					name : "",
+					link :"",
+					idDrive	: "",
+				}
 			}
 		});
 
@@ -113,7 +118,7 @@ module.exports = createCoreController('api::client.client', ({ strapi }) => ({
 			})]
 		);
 
-
+		
 
 		return ctx.send({
 			message: 'Client created',
