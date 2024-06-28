@@ -74,7 +74,7 @@ module.exports = createCoreController('api::client.client', ({ strapi }) => ({
 		});
 
 
-		let cliente = await strapi.db.query('api::client.client').create({
+		/*let cliente = await strapi.db.query('api::client.client').create({
 			data: {
 				name: name,
 				description: description,
@@ -86,7 +86,27 @@ module.exports = createCoreController('api::client.client', ({ strapi }) => ({
 					idDrive	: "",
 				}
 			}
-		});
+		});*/ 
+
+		// creo el cliente con entity server
+
+		let cliente = strapi.entityService.create('api::client.client'. {
+
+			data: {
+				name: name,
+				description: description,
+				user: user.id,
+				folder: folderT.id,
+				carpeta :{
+					name : "",
+					link :"",
+					idDrive	: "",
+				}
+			}
+
+
+
+		})
 
 		// actualizo el folder con el cliente
 
