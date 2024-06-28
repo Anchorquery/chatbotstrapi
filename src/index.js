@@ -204,7 +204,7 @@ module.exports = {
 
               let { type, sala, message, tone, language, chatModel, isGpt, idGpt, clientID } = data;
               let urlImage = null;
-
+              console.log({ type, sala, message, tone, language, chatModel, isGpt, idGpt, clientID });
               if (!message) {
 
                 socket.emit('errorMessage', { message: 'Mensaje no encontrado' });
@@ -278,7 +278,7 @@ module.exports = {
 
               }
 
-              console.log({ type, sala, message, tone, language, chatModel, isGpt, idGpt, clientID });
+              
               if (isGpt) {
 
 

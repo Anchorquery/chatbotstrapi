@@ -5,7 +5,7 @@ async function handleTextMessage(dato, sala, socket) {
 	let { message, client, cantidadVectoresMenajes, cantidadMensajesHistorial, language, tone , isGpt , gpt } = dato;
 	message = message.trim();
 
-
+console.log("isGpt",sala);
 
 	let mentions = extractMentionData(message, true);
 
