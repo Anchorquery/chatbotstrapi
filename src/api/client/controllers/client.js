@@ -272,6 +272,18 @@ module.exports = createCoreController('api::client.client', ({ strapi }) => ({
 
 			})
 
+			await strapi.db.query('api::document-file.document-file').delete({
+
+				where: {
+
+					id: clientModel.folder.id
+
+				},
+
+			})
+
+			
+
 		}
 
 		
