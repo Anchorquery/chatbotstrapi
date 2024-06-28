@@ -54,6 +54,11 @@
       "type": "relation",
       "relation": "oneToOne",
       "target": "api::client.client"
+    },
+    "gpt": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::gpt.gpt"
     }
   }
 }

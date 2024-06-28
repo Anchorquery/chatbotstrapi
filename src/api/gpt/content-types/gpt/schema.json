@@ -58,6 +58,9 @@
     },
     "conversation_starters": {
       "type": "json"
+    },
+    "idChatPreview": {
+      "type": "string"
     }
   }
 }

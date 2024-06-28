@@ -95,6 +95,9 @@
     },
     "remote_url": {
       "type": "string"
+    },
+    "driveId": {
+      "type": "string"
     }
   }
 }

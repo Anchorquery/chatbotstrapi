@@ -9,7 +9,7 @@ const { CSVLoader } = require('langchain/document_loaders/fs/csv');
 const { DocxLoader } = require('langchain/document_loaders/fs/docx');
 const { PDFLoader } = require('langchain/document_loaders/fs/pdf');
 const { TextLoader } = require('langchain/document_loaders/fs/text');
-
+const { documentosNoEstructurados } = require('../loader/Unstructured');
 const {REDIS_PASSWORD, REDIS_HOST,REDIS_PORT,REDIS_DB} = process.env;
 const textSplitter = new RecursiveCharacterTextSplitter({
 	chunkSize: 2000,
@@ -253,9 +253,31 @@ let docs =  await this.createDocumt(nombreFile, file, textSplitter, clienteEmpre
 
 			} else {
 
-				strapi.log.debug('Formato no soportado');
+				// uso documentosNoEstructurados
 
-				throw new Error('Formato no soportado');
+				const documents = await documentosNoEstructurados(absolutePath);
+
+				let chuckHeader = `DOCUMENT NAME: ${nombre} . \n \n`;
+				if (nameClient) {
+					chuckHeader += `PROPERTY DOCUMENT: ${nameClient}.  \n \n`;
+				}
+
+				documents.forEach((doc) => {
+
+					doc.pageContent = chuckHeader + doc.pageContent;
+					doc.metadata = {
+						...doc.metadata,
+						client: nameClient,
+						file: nombre,
+						url : file.url
+					}
+
+				}
+
+				);
+
+				return documents;
+				
 
 			}
 			let docs = await loader.loadAndSplit(textSplitter);

@@ -111,6 +111,11 @@ function parseContentIfNeeded(content) {
 }
 
 async function generateDocumentSummary(docs , message) {
+
+	if (docs.length === 0) {
+		return "";
+
+	}
 	const allDocs = docs.join("\n");
 
 	// @ts-ignore
@@ -170,7 +175,44 @@ function parseContentIfNeeded(content) {
 					return content;
 	}
 }
+async function verificarSiMensajeNoInformacion(message) {
+	const model = new ChatOpenAI({
+					openAIApiKey: process.env.OPENAI_API_KEY,
+					modelName: "gpt-4o-2024-05-13",
+					temperature: 0,
+					timeout: 45000,
+					topP: 1
+	}).bind({
+					response_format: { type: "json_object" },
+	});
 
+	const res = await model.invoke([
+					["system", `Recibe un mensaje de entrada y evalúa si el mensaje indica que no se puede proporcionar información o conseguir información. Devuelve la evaluación en formato JSON con las siguientes propiedades:
+					- 'not_response': true/false (indica si el mensaje indica que no se puede proporcionar información o conseguir información)
+					- 'consulta_1': Mensaje para consultar en internet y obtener información, si aplica; de lo contrario, null
+					- 'consulta_2': Mensaje para consultar en internet y obtener información, si aplica; de lo contrario, null
+					- 'consulta_3': Mensaje para consultar en internet y obtener información, si aplica; de lo contrario, null`],
+					["human", message],
+	]);
+
+	return parseContentIfNeeded(res.content);
+}
+
+function parseContentIfNeeded(content) {
+	const parsed = JSON.parse(content);
+	if (parsed.not_response) {
+					parsed.consulta_1 = generateQuerySuggestion(parsed.message, 1);
+					parsed.consulta_2 = generateQuerySuggestion(parsed.message, 2);
+					parsed.consulta_3 = generateQuerySuggestion(parsed.message, 3);
+	}
+	return parsed;
+}
+
+function generateQuerySuggestion(message, queryNumber) {
+	// Ajusta esta función para generar consultas específicas basadas en el mensaje y el número de consulta
+	const baseQuery = "buscar información sobre ";
+	return `${baseQuery}${message} consulta ${queryNumber}`;
+}
 
 function simuladorCarga(socket, type = "file") {
 	let progress = 0;
@@ -203,6 +245,6 @@ function simuladorCarga(socket, type = "file") {
 }
 
 
-module.exports = { verificarPeticionDeImagen, verificarRespuestaNoDisponible , verificarYTraducirMensajeDeError,generateDocumentSummary,verificarPeticionDePost,verificarPeticion,simuladorCarga};
+module.exports = { verificarPeticionDeImagen, verificarRespuestaNoDisponible , verificarYTraducirMensajeDeError,generateDocumentSummary,verificarPeticionDePost,verificarPeticion,simuladorCarga,verificarSiMensajeNoInformacion};
 
 

@@ -70,6 +70,12 @@
     },
     "contactEmail": {
       "type": "string"
+    },
+    "carpeta": {
+      "displayName": "carpeta",
+      "type": "component",
+      "repeatable": false,
+      "component": "carpeta.carpeta"
     }
   }
 }

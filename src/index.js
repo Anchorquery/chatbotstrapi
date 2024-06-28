@@ -202,9 +202,9 @@ module.exports = {
           socket.on('message', async (data) => {
             try {
 
-              let { type, sala, message, tone, language, chatModel } = data;
+              let { type, sala, message, tone, language, chatModel, isGpt, idGpt, clientID } = data;
               let urlImage = null;
-              console.log(data)
+
               if (!message) {
 
                 socket.emit('errorMessage', { message: 'Mensaje no encontrado' });
@@ -243,6 +243,27 @@ module.exports = {
                   }
 
                 })
+
+                if (isGpt){
+
+                  // actualizo el fild idChatPreview en el gpt
+
+                  await strapi.db.query('api::gpt.gpt').update({
+
+                    where: {
+
+                      id: idGpt
+
+                    },
+
+                    data: {
+
+                      idChatPreview: sala
+
+                    }
+
+                  })
+                }
                 socket.emit('newChat', { sala, name: nameSala })
               } else {
 
@@ -257,6 +278,64 @@ module.exports = {
 
               }
 
+              console.log({ type, sala, message, tone, language, chatModel, isGpt, idGpt, clientID });
+              if (isGpt) {
+
+
+                // las ejecuto en paralelo
+
+                var [gpt, clientPerfil] = await Promise.all([
+
+                  strapi.db.query('api::gpt.gpt').findOne({
+
+                    where: {
+
+                      id: idGpt
+
+                    }
+
+                  }),
+
+                  strapi.db.query('api::client.client').findOne({
+
+                    where: {
+
+                      id: clientID
+
+                    }
+
+                  })
+
+                ]);
+
+
+                if (!gpt) {
+
+                  socket.emit('errorMessage', { message: 'Gpt no encontrado' });
+
+                  return;
+
+                }
+
+
+                if (!clientPerfil) {
+
+                  socket.emit('errorMessage', { message: 'Cliente no encontrado' });
+
+                  return;
+
+                }
+
+
+                // lo añado a data
+
+                
+
+                data = { ...data, gpt , clientPerfil };
+
+              }
+
+            
 
 
               if (type == 'text' || type == 'chat') {
@@ -360,12 +439,13 @@ module.exports = {
 
                 if (info.error) {
                   socket.emit('errorMessage', { message: info.message });
+
+                  return;
                 }
 
                 // Inicializar el modelo de chat con la URL de la imagen (si se generó una)
                 let model = initializeChatModel(chatModel?.modelName, sala, socket, urlImage);
 
-                console.log(info)
                 let response = await handleMessageChain(info, model);
 
                 // Manejar las operaciones de la base de datos
@@ -528,12 +608,12 @@ module.exports = {
             try {
               const simulator = new ProgressSimulator(socket);
               simulator.start()
-              .then((message) => {
-                console.log(message);
-              })
-              .catch((error) => {
-                console.error('Error:', error.message);
-              });
+                .then((message) => {
+                  console.log(message);
+                })
+                .catch((error) => {
+                  console.error('Error:', error.message);
+                });
 
               const { user } = socket;
 
@@ -572,7 +652,7 @@ module.exports = {
 
 
 
-                let prompt = `Genera una descripción, instrucciones y cuatro iniciadores de conversación en formato JSON basado en el MENSAJE, el NOMBRE_CLIENTE y un CONTEXTO opcional. Asegúrate de que las instrucciones sean claras y detalladas, si se pasa un NOMBRE_CLIENTE , gira todo alrededor de ello  y que el formato JSON siga el ejemplo proporcionado.
+              let prompt = `Genera una descripción, instrucciones y cuatro iniciadores de conversación en formato JSON basado en el MENSAJE, el NOMBRE_CLIENTE y un CONTEXTO opcional. Asegúrate de que las instrucciones sean claras y detalladas, si se pasa un NOMBRE_CLIENTE , gira todo alrededor de ello  y que el formato JSON siga el ejemplo proporcionado.
 
           MENSAJE: Un asistente de programación.
           
@@ -617,37 +697,37 @@ module.exports = {
           `;
 
 
-                // inicio el modelo
+              // inicio el modelo
 
-                let model = initializeChatModel('gpt-4o-2024-05-13', null, socket, null, { temperature: 0.7 });
-
-
-                let response = await handleMessageChainCreate({ message, context: "", client, clientName, prompt }, model);
+              let model = initializeChatModel('gpt-4o-2024-05-13', null, socket, null, { temperature: 0.7 });
 
 
-                // actualizo el estado del gpt
+              let response = await handleMessageChainCreate({ message, context: "", client, clientName, prompt }, model);
 
 
-                let gptData = await strapi.db.query('api::gpt.gpt').update({
-
-                  where: {
-                    id: idGpt
-                  },
-                  data: {
-                    prompt: response.instrucciones,
-                    creation_steps: "dos",
-                    description: response.descripcion,
-                    conversation_starters: response.iniciadores_de_conversacion,
-                    state: "published"
-                  }
-
-                });
+              // actualizo el estado del gpt
 
 
-                // emito el mensaje de respuesta
+              let gptData = await strapi.db.query('api::gpt.gpt').update({
 
-                socket.emit('crearResponseGpt', { message: "Gpt creado exitiosamente. Vaya a la pesataña de configuracion o envie otro mensaje para regenerarlo", data: gptData });
-                // cancelo simulador
+                where: {
+                  id: idGpt
+                },
+                data: {
+                  prompt: response.instrucciones,
+                  creation_steps: "dos",
+                  description: response.descripcion,
+                  conversation_starters: response.iniciadores_de_conversacion,
+                  state: "published"
+                }
+
+              });
+
+
+              // emito el mensaje de respuesta
+
+              socket.emit('crearResponseGpt', { message: "Gpt creado exitiosamente. Vaya a la pesataña de configuracion o envie otro mensaje para regenerarlo", data: gptData });
+              // cancelo simulador
 
 
               simulator.cancel();
@@ -661,6 +741,8 @@ module.exports = {
 
 
           });
+
+
 
 
           socket.on('disconnect', async (reason) => {

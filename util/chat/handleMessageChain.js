@@ -4,6 +4,8 @@ const { generateDocumentSummary } = require("../common/util.js");
 
 async function handleMessageChain(info, model) {
 
+	console.log(info);
+
 	const summary = await generateDocumentSummary(info.docs,info.message);
 	const chain = new LLMChain({
 					llm: model,

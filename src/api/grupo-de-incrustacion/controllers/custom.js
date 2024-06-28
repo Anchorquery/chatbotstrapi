@@ -6,8 +6,14 @@
 
 const { createCoreController } = require('@strapi/strapi').factories;
 const DocumentQueue = require("../../../../util/queue/files-queue.js");
-const Promise	= require('bluebird');
+const Promise = require('bluebird');
 const { google } = require('googleapis');
+const { bufferToFile } = require('../../../../util/common/bufferToFile.js');
+
+// exporto uuid para poder generar un hash
+
+const { v4: uuidv4 } = require('uuid');
+
 
 const oauth2Client = new google.auth.OAuth2(
 	process.env.GOOGLE_CLIENT_ID,
@@ -36,43 +42,43 @@ function checkString(str) {
 }
 async function getFolderName(folderId, drive) {
 	try {
-			const response = await drive.files.get({
-					fileId: folderId,
-					fields: 'id, name',
-			});
-			return response.data.name;
+		const response = await drive.files.get({
+			fileId: folderId,
+			fields: 'id, name',
+		});
+		return response.data.name;
 	} catch (error) {
-			console.error('Error getting folder name:', error);
-			return null;
+		console.error('Error getting folder name:', error);
+		return null;
 	}
 }
 
 async function getTotalItemsInFolder(folderId, drive) {
 	try {
-			const response = await drive.files.list({
-					q: `'${folderId}' in parents and trashed = false`,
-					fields: 'files(id)',
-					pageSize: 1000
+		const response = await drive.files.list({
+			q: `'${folderId}' in parents and trashed = false`,
+			fields: 'files(id)',
+			pageSize: 1000
+		});
+
+		let totalItems = response.data.files.length;
+		let nextPageToken = response.data.nextPageToken;
+
+		while (nextPageToken) {
+			const nextPageResponse = await drive.files.list({
+				q: `'${folderId}' in parents and trashed = false`,
+				fields: 'files(id)',
+				pageSize: 1000,
+				pageToken: nextPageToken
 			});
+			totalItems += nextPageResponse.data.files.length;
+			nextPageToken = nextPageResponse.data.nextPageToken;
+		}
 
-			let totalItems = response.data.files.length;
-			let nextPageToken = response.data.nextPageToken;
-
-			while (nextPageToken) {
-					const nextPageResponse = await drive.files.list({
-							q: `'${folderId}' in parents and trashed = false`,
-							fields: 'files(id)',
-							pageSize: 1000,
-							pageToken: nextPageToken
-					});
-					totalItems += nextPageResponse.data.files.length;
-					nextPageToken = nextPageResponse.data.nextPageToken;
-			}
-
-			return totalItems;
+		return totalItems;
 	} catch (error) {
-			console.error('Error getting total items:', error);
-			return 0;
+		console.error('Error getting total items:', error);
+		return 0;
 	}
 }
 module.exports = createCoreController('api::grupo-de-incrustacion.grupo-de-incrustacion', ({ strapi }) => ({
@@ -121,8 +127,8 @@ module.exports = createCoreController('api::grupo-de-incrustacion.grupo-de-incru
 
 		}
 
-		if (_client== 'null') {
-				
+		if (_client == 'null') {
+
 			_client = null;
 
 			ctx.query._client = _client;
@@ -143,71 +149,71 @@ module.exports = createCoreController('api::grupo-de-incrustacion.grupo-de-incru
 	// Función para buscar en Google Drive
 	async searchInGoogleDrive(ctx, user, _limit, _page, _q, folderId = 'root') {
 		try {
-				const googleTokens = await strapi.db.query("api::user-google-token.user-google-token").findOne({
-						where: { user: user.id },
-				});
+			const googleTokens = await strapi.db.query("api::user-google-token.user-google-token").findOne({
+				where: { user: user.id },
+			});
 
-				if (!googleTokens) {
-						return ctx.badRequest("Error", { error: true, message: "Tokens de Google no encontrados" });
-				}
+			if (!googleTokens) {
+				return ctx.badRequest("Error", { error: true, message: "Tokens de Google no encontrados" });
+			}
 
-	
-				oauth2Client.setCredentials({
-						access_token: googleTokens.access_token,
-						refresh_token: googleTokens.refresh_token,
-						expiry_date: googleTokens.expiry_date,
-				});
 
-				const drive = google.drive({ version: 'v3', auth: oauth2Client });
+			oauth2Client.setCredentials({
+				access_token: googleTokens.access_token,
+				refresh_token: googleTokens.refresh_token,
+				expiry_date: googleTokens.expiry_date,
+			});
 
-				// Obtener el total de ítems en la carpeta
-				const totalItems = await getTotalItemsInFolder(folderId, drive);
-				console.log(`Total items in folder: ${totalItems}`);
+			const drive = google.drive({ version: 'v3', auth: oauth2Client });
 
-				let query = `'${folderId}' in parents and trashed = false`;
-				if (_q) {
-						query += ` and name contains '${_q}'`;
-				}
-				let pageToken = ctx.query._pageToken || null;
+			// Obtener el total de ítems en la carpeta
+			const totalItems = await getTotalItemsInFolder(folderId, drive);
+			console.log(`Total items in folder: ${totalItems}`);
 
-				
-				let params = {
-					supportsAllDrives	: true,
-					q: query,
-					pageSize: _limit,
-					fields: 'nextPageToken, files(id, name, mimeType, parents)'
+			let query = `'${folderId}' in parents and trashed = false`;
+			if (_q) {
+				query += ` and name contains '${_q}'`;
+			}
+			let pageToken = ctx.query._pageToken || null;
+
+
+			let params = {
+				supportsAllDrives: true,
+				q: query,
+				pageSize: _limit,
+				fields: 'nextPageToken, files(id, name, mimeType, parents,  webViewLink)'
 			};
 			if (pageToken && pageToken !== 'null') {
-					params.pageToken = pageToken;
+				params.pageToken = pageToken;
 			}
 
 			const response = await drive.files.list(params);
 
 
-				const files = response.data.files;
-				const nextPageToken = response.data.nextPageToken;
-				if (!files || files.length === 0) {
-						return ctx.send({ data: [], meta: { pagination: { page: _page, limit: _limit, total: 0, lastPage: 1 } } });
+			const files = response.data.files;
+			const nextPageToken = response.data.nextPageToken;
+			if (!files || files.length === 0) {
+				return ctx.send({ data: [], meta: { pagination: { page: _page, limit: _limit, total: 0, lastPage: 1 } } });
+			}
+
+			// Obtener los nombres de las carpetas parent
+			for (let file of files) {
+				if (file.parents && file.parents.length > 0) {
+					// @ts-ignore
+					file.parentNames = await Promise.all(file.parents.map(parentId => getFolderName(parentId, drive)));
 				}
+			}
 
-				// Obtener los nombres de las carpetas parent
-				for (let file of files) {
-						if (file.parents && file.parents.length > 0) {
-								// @ts-ignore
-								file.parentNames = await Promise.all(file.parents.map(parentId => getFolderName(parentId, drive)));
-						}
-				}
+			const totalFiles = totalItems;
+			const _lastPage = Math.ceil(totalFiles / _limit);
 
-				const totalFiles = totalItems;
-				const _lastPage = Math.ceil(totalFiles / _limit);
-
-				return ctx.send({ data: files, meta: { pagination: { page: _page, limit: _limit, total: totalFiles, lastPage: _lastPage,prevPageToken: pageToken , nextPageToken } } });
+			return ctx.send({ data: files, meta: { pagination: { page: _page, limit: _limit, total: totalFiles, lastPage: _lastPage, prevPageToken: pageToken, nextPageToken } } });
 
 		} catch (error) {
-				console.error("Google Drive Error:", error);
-				return ctx.badRequest("Error", { error: true, message: error.message });
+			console.error("Google Drive Error:", error);
+			return ctx.badRequest("Error", { error: true, message: error.message });
 		}
-},
+	},
 
 
 	// Función para buscar en la base de datos actual
@@ -451,26 +457,18 @@ module.exports = createCoreController('api::grupo-de-incrustacion.grupo-de-incru
 
 
 	},
- 
+
 
 	async incrustarDedeDrive(ctx) {
-
 		const { user } = ctx.state;
 
 		if (!user) return ctx.unauthorized("Unauthorized");
 
-		// si se manda un uuid entonces es actualizar si no es crear
+		let { title, client, idDrive, tags, uuid } = ctx.request.body;
 
-		let { title, client, idDrive, tags,  uuid  } = ctx.request.body;
-
-		console.log("tags", ctx.request.body)
 		if (!idDrive) {
 			return ctx.badRequest("Faltan datos");
 		}
-
-
-		/// obtengo el arcivo	de google drive
-
 
 		const googleTokens = await strapi.db.query("api::user-google-token.user-google-token").findOne({
 			where: { user: user.id },
@@ -489,130 +487,190 @@ module.exports = createCoreController('api::grupo-de-incrustacion.grupo-de-incru
 
 		const drive = google.drive({ version: 'v3', auth: oauth2Client });
 
-		const file = await drive.files.get({
+		const fileDrive = await drive.files.get({
 			fileId: idDrive,
-			fields: 'id, name, mimeType, parents',
+			fields: '*',
 		});
 
-		console.log(file)
-
-		let mimeType = file.data.mimeType;
-
-		// el archivo debe ser pdf, word o excel
-
-		if (mimeType != "application/pdf" && mimeType != "application/vnd.openxmlformats-officedocument.wordprocessingml.document" && mimeType != "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") {
-
+		let mimeType = fileDrive.data.mimeType;
+		if (mimeType !== "application/pdf" && mimeType !== "application/vnd.openxmlformats-officedocument.wordprocessingml.document" && mimeType !== "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") {
 			return ctx.badRequest("El archivo no es valido");
-
 		}
 
-		// obtengo el cliente
-
 		client = await strapi.db.query("api::client.client").findOne({
-			where: {
-				uuid: client
-			}
+			where: { uuid: client }
 		});
-
-
-		// obtengo el archivo
-
 
 		const fileStream = await drive.files.get({
 			fileId: idDrive,
 			alt: 'media',
-		}, { responseType: 'stream' });
+		}, { responseType: 'arraybuffer' });
 
-		// obtengo el nombre del archivo
+		let nombreFile = fileDrive.data.name;
+		let size = fileDrive.data.size;
+		let type = fileDrive.data.mimeType;
+		let ext = fileDrive.data.fileExtension;
+		let nombre_sin_ext = nombreFile.split('.').slice(0, -1).join('.');
+		let hash = `${uuidv4()}_${nombre_sin_ext}`;
 
-		let nombreFile = file.data.name;
+		// @ts-ignore
+		const fileBuffer = Buffer.from(fileStream.data);
+		const file = await bufferToFile(fileBuffer, { name: nombreFile, mime: type, size: size, ext: ext, hash: hash });
 
-		// obtengo el tamaño del archivo
+		const mediaUpload = await strapi.plugin('upload').service('upload').uploadFileAndPersist(file);
 
-		let size = file.data.size;
-
-		// obtengo el tipo de archivo
-
-		let type = file.data.mimeType;
-
-		// obtengo el id del archivo
-
-		let id = file.data.id;
-
-		// SUBO EL ARCHIVO A STRAPI
-
-		// GENERO EL GRUPO DE INCRUSTACION
-
+		await strapi.query("plugin::upload.file").create({ data: file });
 
 		if (uuid) {
-
-			let grupoIncrustacion = await strapi.db.query("api::grupo-de-incrustacion.grupo-de-incrustacion").findOne({
-				where: {
-					uuid
-				}
+			var grupoIns = await strapi.db.query("api::grupo-de-incrustacion.grupo-de-incrustacion").findOne({
+				where: { uuid }
 			});
 
-			if (!grupoIncrustacion) {
+			await strapi.entityService.update('api::grupo-de-incrustacion.grupo-de-incrustacion', grupoIns.id, {
+				data: {
+					title: title ? title : nombre_sin_ext,
+					client: client?.id,
+					media: mediaUpload.id,
+					isTag: tags && tags.length > 0 ? true : false,
+					tags: tags,
+					create: user.id,
+					drive: true,
+					driveId: idDrive,
+					remoteUrl: fileDrive.data.webViewLink
+				},
+			});
+		} else {
+			tags = await this.procesarTags(tags);
 
-				return ctx.badRequest("Grupo de incrustacion no encontrado");
+			var grupoIns = await strapi.db.query("api::grupo-de-incrustacion.grupo-de-incrustacion").create({
+				data: {
+					title: title ? title : nombre_sin_ext,
+					client: client?.id,
+					media: mediaUpload.id,
+					isTag: tags && tags.length > 0 ? true : false,
+					tags: tags,
+					create: user.id,
+					drive: true,
+					driveId: idDrive,
+					remoteUrl: fileDrive.data.webViewLink
+				}
+			});
+		}
+
+		await this.procesarYSubirDocumento(grupoIns.id, title ? title : nombre_sin_ext, mediaUpload, client, user);
+
+		await drive.files.update({
+			fileId: idDrive,
+			requestBody: {
+				appProperties: {
+					grupoIncrustacion: mediaUpload.id
+				}
+			}
+		});
+
+		return ctx.send({ data: "ok" });
+	},
+
+
+	async addFolderDrive(ctx) {
+
+
+		// recibo id, nobre , cliente y link
+		try {
+			const { user } = ctx.state;
+
+			if (!user) return ctx.unauthorized("Unauthorized");
+
+			let { idDrive, title, client, link } = ctx.request.body;
+
+
+
+
+			client = await strapi.db.query("api::client.client").findOne({
+				where: { uuid: client }
+			});
+
+
+
+
+			const googleTokens = await strapi.db.query("api::user-google-token.user-google-token").findOne({
+				where: { user: user.id },
+			});
+
+
+			if (!googleTokens) {
+				return ctx.badRequest("Error", { error: true, message: "Tokens de Google no encontrados" });
+			}
+
+
+			oauth2Client.setCredentials({
+				access_token: googleTokens.access_token,
+				refresh_token: googleTokens.refresh_token,
+				expiry_date: googleTokens.expiry_date,
+			});
+
+
+			const drive = google.drive({ version: 'v3', auth: oauth2Client });
+
+
+			// obtengo la carpeta para tener el nombre
+
+			if (!idDrive) {
+
+				// consulto la carpeta raiz para obtener le nombre y el id 
+
+				var folder = await drive.files.get({
+					fileId: 'root',
+					fields: 'name, webViewLink, id',
+					supportsAllDrives: true
+				});
+
+				
+
+			} else {
+				var folder = await drive.files.get({
+					fileId: idDrive,
+					fields: 'name, webViewLink, id',
+					supportsAllDrives: true
+				});
+
 
 			}
 
-			await strapi.entityService.update('api::grupo-de-incrustacion.grupo-de-incrustacion', grupoIncrustacion.id, {
+			const folderName = folder.data.name;
+
+console.log(folder.data)
+			await strapi.entityService.update('api::client.client', client.id, {
+
 				data: {
-					title,
-					client: client?.id,
-					media: {
-						id: id,
-						name: nombreFile,
-						size,
-						type
-					},
-					isTag: tags && tags.length > 0 ? true : false,
-					tags: tags
-				},
+					carpeta: {
+						idDrive : folder.data.id,
+						name: folderName,
+						link : folder.data.webViewLink
+					}
+				}
 			});
 
-			return ctx.send({ data: uuid });
 
-		}	else {
+			// retorno el nombre de la carpeta para mostrarlo en el front 
 
-			let grupoIncrustacion = await strapi.entityService.create('api::grupo-de-incrustacion.grupo-de-incrustacion', {
-				title,
-				client: client?.id,
-				media: {
-					id: id,
-					name: nombreFile,
-					size,
-					type
-				},
-				isTag: tags && tags.length > 0 ? true : false,
-				tags: tags
+
+			return ctx.send({
+				data: {
+					name: folderName,
+					id: idDrive,
+
+				}
 			});
 
-			return ctx.send({ data: grupoIncrustacion.uuid });
-
+		} catch (error) {
+			 
+			console.log(error)
+			return ctx.badRequest("Error", { error: true, message: error.message });
 		}
 
 
-		//retorno para ver como funciona la funcion
 
-		 return ctx.send({ data: fileStream.data });
-
-	}
-
-
-
-
-
-
-
-
-
- 
-
-
-
-
+	},
 
 }));

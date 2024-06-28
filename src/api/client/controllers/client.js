@@ -6,7 +6,6 @@
 
 const { createCoreController } = require('@strapi/strapi').factories;
 const { Promise } = require('bluebird');
-const { pop } = require('../../../../config/middlewares');
 
 module.exports = createCoreController('api::client.client', ({ strapi }) => ({
 
@@ -91,7 +90,7 @@ module.exports = createCoreController('api::client.client', ({ strapi }) => ({
 
 		// creo un gpt 
 
-		;
+		
 
 
 		Promise.allSettled([
@@ -186,6 +185,7 @@ module.exports = createCoreController('api::client.client', ({ strapi }) => ({
 			limit: _limit,
 			offset: _offset,
 			where: where,
+			populate: ['gpt', 'folder'],
 			orderBy: { name: 'asc' },
 
 		});
@@ -296,7 +296,7 @@ module.exports = createCoreController('api::client.client', ({ strapi }) => ({
 				//user: user.id,
 
 			},
-			populate: ['folder', 'picture', 'gpt']
+			populate: ['folder', 'picture', 'gpt','carpeta']
 		});
 
 		if (!client) return ctx.badRequest("Client not found", { error: "Client not found" });
