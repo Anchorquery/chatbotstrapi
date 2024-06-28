@@ -107,6 +107,7 @@ module.exports = createCoreController('api::client.client', ({ strapi }) => ({
 
 
 		})
+		console.log("nuasd",cliente);
 		// actualizo el folder con el cliente
 
 
