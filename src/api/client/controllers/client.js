@@ -90,7 +90,7 @@ module.exports = createCoreController('api::client.client', ({ strapi }) => ({
 
 		// creo el cliente con entity server
 
-		let cliente = strapi.entityService.create('api::client.client', {
+		let cliente = await strapi.entityService.create('api::client.client', {
 
 			data: {
 				name: name,
@@ -107,7 +107,6 @@ module.exports = createCoreController('api::client.client', ({ strapi }) => ({
 
 
 		})
-
 		// actualizo el folder con el cliente
 
 
@@ -118,7 +117,7 @@ module.exports = createCoreController('api::client.client', ({ strapi }) => ({
 		
 
 
-		Promise.allSettled([
+		Promise.all ([
 			await strapi.db.query('api::document-file.document-file').update({
 				where: {
 					id: folderT.id
@@ -282,7 +281,7 @@ module.exports = createCoreController('api::client.client', ({ strapi }) => ({
 
 			})
 
-			
+
 
 		}
 
