@@ -221,12 +221,12 @@ module.exports = createCoreController('api::grupo-de-incrustacion.grupo-de-incru
 		const { _limit, _page, _sort, _q, _client, _isMe, _type, _isInfobase, _state } = queryParams;
 
 		let where = { queueState: "completed" };
-
-		if (_client) where.client = _client;
-		if (_type) where.type = _type;
-		if (_isMe == true) where.create = user.id;
-		if (_isInfobase == true) where.infobase = _isInfobase;
-		if (_state) where.queueState = _state;
+		
+		if (_type && _type !== 'null') where.type = _type;
+		if (_isMe === true || _isMe === 'true') where.create = user.id;
+		if (_isInfobase === true || _isInfobase === 'true') where.infobase = _isInfobase;
+		if (_state && _state !== 'null') where.queueState = _state;
+		
 		if (_q) where.title = { $containsi: _q };
 
 		const _offset = (_page - 1) * _limit;
@@ -239,6 +239,8 @@ module.exports = createCoreController('api::grupo-de-incrustacion.grupo-de-incru
 				sort: _sort,
 				populate: ["media", "client", "create", "tags"]
 			});
+
+			console.log(items)
 
 			items.forEach(element => {
 				element.create = element.create?.name ? `${element.create?.name} ${element.create?.lastName}` : element.create?.email;

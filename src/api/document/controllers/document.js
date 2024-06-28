@@ -381,10 +381,10 @@ module.exports = createCoreController('api::document.document', ({ strapi }) => 
 
 
 		} catch (error) {
-			strapi.log.debug(error)
+			console.log(error);
 			// lanzo el error
 
-
+			 throw	error;
 		}
 
 
