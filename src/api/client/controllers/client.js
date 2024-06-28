@@ -90,7 +90,7 @@ module.exports = createCoreController('api::client.client', ({ strapi }) => ({
 
 		// creo el cliente con entity server
 
-		let cliente = strapi.entityService.create('api::client.client'. {
+		let cliente = strapi.entityService.create('api::client.client', {
 
 			data: {
 				name: name,
