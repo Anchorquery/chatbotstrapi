@@ -37,7 +37,7 @@ class DocumentQueue {
     this.queue = new Queue('document-file-queue', {
       redis: {
 							host: REDIS_HOST,
-    			port: 6379,
+    			port: parseInt(REDIS_PORT),
 							password: REDIS_PASSWORD,
 						},
       limiter: {

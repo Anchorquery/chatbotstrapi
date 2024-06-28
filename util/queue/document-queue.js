@@ -39,7 +39,7 @@ class DocumentSitemapQueue {
     this.queue = new Queue('document-queue', {
 					redis: {
 						host: REDIS_HOST,
-						port: 6379,
+						port: parseInt(REDIS_PORT),
 						password: REDIS_PASSWORD,
 					},
       limiter: {
