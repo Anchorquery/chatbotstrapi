@@ -240,6 +240,9 @@ module.exports = createCoreController('api::document.document', ({ strapi }) => 
 
 			}
 
+			// en base a la url saco el nombre
+
+
 
 			recursivity = recursivity == 'true' ? true : false;
 

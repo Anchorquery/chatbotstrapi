@@ -3,9 +3,6 @@
 /**
 	* document-file controller
 	*/
-const showdown = require('showdown');
-const client = require('../../client/controllers/client');
-const { forEach } = require('../../../../config/middlewares');
 
 const { createCoreController } = require('@strapi/strapi').factories;
 
