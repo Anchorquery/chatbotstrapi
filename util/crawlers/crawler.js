@@ -2,17 +2,19 @@ const Spider = require('node-spider');
 const TurndownService = require('turndown');
 const cheerio = require('cheerio');
 const parse = require('url-parse');
+const puppeteer = require('puppeteer');
 
 const turndownService = new TurndownService();
 
 class Crawler {
-  constructor(urls, limit = 1000, textLengthMinimum = 200) {
+  constructor(urls, limit = 1000, textLengthMinimum = 200, usePuppeteer = false) {
     this.pages = [];
     this.limit = limit;
     this.urls = urls;
     this.spider = null;
     this.count = 0;
     this.textLengthMinimum = textLengthMinimum;
+    this.usePuppeteer = usePuppeteer;
   }
 
   removeUnwantedElements($, selectors) {
@@ -20,7 +22,15 @@ class Crawler {
   }
 
   async handleRequest(doc) {
-    const $ = cheerio.load(doc.res.body);
+    let $;
+    if (this.usePuppeteer) {
+      console.log(`Loading page with puppeteer ${doc.url}`);
+      $ = await this.loadPageWithPuppeteer(doc.url);
+    } else {
+      console.log(`Loading page with cheerio ${doc.url}`);
+      $ = cheerio.load(doc.res.body);
+    }
+
     const unwantedSelectors = ['script', '#hub-sidebar', 'header', 'nav', 'img'];
     this.removeUnwantedElements($, unwantedSelectors);
     const title = $("title").text() || $(".article-title").text();
@@ -51,6 +61,16 @@ class Crawler {
         this.count = this.count + 1;
       }
     });
+  }
+
+  async loadPageWithPuppeteer(url) {
+    const browser = await puppeteer.launch();
+    const page = await browser.newPage();
+    await page.goto(url, { waitUntil: 'networkidle2' });
+    const content = await page.content();
+    await browser.close();
+   const contenido = await cheerio.load(content);
+    return contenido;
   }
 
   async start() {

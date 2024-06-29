@@ -5,10 +5,10 @@ const path = require('path');
 
 module.exports = ({ env }) => ({
   transports: [
-    new winston.transports.File({
+   /* new winston.transports.File({
       filename: path.join(__dirname, '..', 'logs', 'strapi.log'),
       level: 'silly', // Captura desde debug hasta los niveles más críticos
-    }),
+    }),*/
     new winston.transports.Console({
       level: 'silly', 
     })

@@ -30,6 +30,7 @@ const textSplitter = new RecursiveCharacterTextSplitter({
 });
 
 const DocumentSitemapQueue = require("../../../../util/queue/document-queue.js");
+
 module.exports = createCoreController('api::document.document', ({ strapi }) => ({
 
 
@@ -44,6 +45,8 @@ module.exports = createCoreController('api::document.document', ({ strapi }) => 
 
 
 			const { client, type, folder } = ctx.request.body;
+
+
 			if (!file) return ctx.badRequest("File required", { message: 'File required' });
 
 			const dbConfig = {
@@ -93,8 +96,6 @@ module.exports = createCoreController('api::document.document', ({ strapi }) => 
 				}
 
 			);
-
-			/*if (grupoIncrustacion) return ctx.badRequest("Group not found", { message: 'Un archivo bajo este nombre, cliente y generado por ti ya fue incrustado' });*/
 
 			if (!grupoIncrustacion) {
 
@@ -217,181 +218,145 @@ module.exports = createCoreController('api::document.document', ({ strapi }) => 
 	},
 
 	async uploadUrlEmbadding(ctx) {
+  try {
+    const { user } = ctx.state;
+    if (!user) return ctx.unauthorized("Unauthorized", { message: 'Unauthorized' });
+
+    // Emit message to user
+    strapi.io.in(`user_${user.uuid}`).emit('messageTaskSchedule', { message: `Se encontraron urls` });
+
+    let { recursivity, summarize, cleanHtml, puppeteer, client, type, url } = ctx.request.body;
+    let file = ctx.request.files ? ctx.request.files.file : null;
+
+    console.log(ctx.request.body);
+
+    // Parse boolean values
+    recursivity = this.parseBoolean(recursivity);
+    summarize = this.parseBoolean(summarize);
+    cleanHtml = this.parseBoolean(cleanHtml);
+    puppeteer = this.parseBoolean(puppeteer);
+
+    if (!url && !file) return ctx.badRequest("Url or file required", { message: 'Url or file required' });
+
+    const clienteEmpresa = await this.getClient(client);
+    if (!clienteEmpresa) return ctx.badRequest("Client not found", { message: 'Client not found' });
+
+    let nombreFile = this.getFileName(file, url);
+    let fileNameNoExt = `${uuid()}_${this.sanitizeFileName(nombreFile)}`;
+
+    let grupoIncrustacion = await this.getOrCreateGrupoIncrustacion(clienteEmpresa, nombreFile, user.id, url, type);
+    if (!grupoIncrustacion) {
+      return ctx.badRequest("Group creation failed", { message: 'Group creation failed' });
+    }
+
+    if (file) {
+      await this.processFile(file, fileNameNoExt, grupoIncrustacion.id);
+    }
+					console.log(user, grupoIncrustacion.id);
+    const documentQueue = new DocumentSitemapQueue(user, grupoIncrustacion.id);
+    if (type === 'txt') {
+      url = file;
+    }
+
+    documentQueue.addDocumentToQueue({
+      urlOrTxt: url, nombreFile, clienteEmpresa, summarize, cleanHtml, puppeteer,
+      user, grupoIncrustacion, filterUrl: [], blocksize: 0, blocknum: 0,
+      minLenChar: 200, recursivity, type
+    });
+
+			
+
+    return ctx.send({ message: 'File uploaded' });
+  } catch (error) {
+    console.log(error);  }
+},
+
+// Helper functions
+parseBoolean(value) {
+  return value === 'true' ? true : false;
+},
+
+async getClient(clientUuid) {
+  return await strapi.db.query('api::client.client').findOne({
+    where: { uuid: clientUuid },
+    select: ['id', 'name']
+  });
+},
+
+getFileName(file, url) {
+  return file ? file.name.split('.')[0] :  this.getFileNameFromUrl(url);
+},
+getFileNameFromUrl(url) {
+	// Crear un objeto URL a partir de la cadena de URL
+	const urlObj = new URL(url);
+console.log(urlObj);
+	// Obtener el path de la URL y eliminar la primera barra
+let path = urlObj.pathname.slice(1).trim();
+	// Dividir el path en segmentos
+	const segmentos = path.split('/');
+
+	console.log(segmentos);
+	let nombreConGuiones = segmentos[segmentos.length - 1];
+
+	if (nombreConGuiones == '' && segmentos.length > 1) {
+		nombreConGuiones = segmentos[segmentos.length - 2];
+	}
+
+
+	// Reemplazar los guiones con espacios
+	const nombreConEspacios = nombreConGuiones.replace(/-/g, ' ');
+
+
+	return nombreConEspacios;
+},
+sanitizeFileName(fileName) {
+  return fileName.trim().replace(/[*+~.()'"!:@]/g, '').replace(/[_-]/g, ' ');
+},
+
+async getOrCreateGrupoIncrustacion(clienteEmpresa, nombreFile, userId, url, type) {
+  let grupoIncrustacion = await strapi.db.query('api::grupo-de-incrustacion.grupo-de-incrustacion').findOne({
+    where: { client: clienteEmpresa.id, title: nombreFile, create: userId },
+    select: ['id']
+  });
+
+  if (!grupoIncrustacion) {
+    let data = { title: nombreFile, client: clienteEmpresa.id, create: userId };
+    if (url) {
+      data.remote_url = url;
+    }
+    grupoIncrustacion = await strapi.db.query('api::grupo-de-incrustacion.grupo-de-incrustacion').create({
+      data: { ...data, type }
+    });
+  }
+
+  return grupoIncrustacion;
+},
+
+async processFile(file, fileNameNoExt, grupoIncrustacionId) {
+  const buffer = await fs.promises.readFile(file.path);
+
+  const createAndAssignTmpWorkingDirectoryToFiles = () => fse.mkdtemp(path.join(os.tmpdir(), 'strapi-upload-'));
+  const entity = {
+    name: `${file.name}`,
+    hash: fileNameNoExt,
+    ext: path.extname(file.name),
+    mime: file.type,
+    size: this.convbyteToKB(file.size),
+    provider: 'local',
+    tmpWorkingDirectory: await createAndAssignTmpWorkingDirectoryToFiles(),
+    getStream: () => Readable.from(buffer),
+    folderPath: '/1',
+    related: {
+      id: grupoIncrustacionId,
+      __type: 'api::grupo-de-incrustacion.grupo-de-incrustacion',
+      __pivot: { field: 'media' }
+    }
+  };
+
+  await strapi.plugin('upload').service('upload').uploadFileAndPersist(entity);
+  await strapi.query("plugin::upload.file").create({ data: entity });
+},
 
-		try {
-
-			const { user } = ctx.state;
-
-			if (!user) return ctx.unauthorized("Unauthorized", { message: 'Unauthorized' });
-
-			// saco el archivo de la url
-
-			// @ts-ignore
-			strapi.io.in(`user_${user.uuid}`).emit('messageTaskSchedule', { message: `Se encontraron  urls` });
-
-			let { recursivity,summarize, cleanHtml, puppeteer,  client, type, url } = ctx.request.body;
-
-			let file;
-
-			if (ctx.request.files) {
-
-				file = ctx.request.files.file;
-
-
-			}
-
-			// en base a la url saco el nombre
-
-
-
-			recursivity = recursivity == 'true' ? true : false;
-
-			summarize = summarize == 'true' ? true : false;
-
-			cleanHtml = cleanHtml == 'true' ? true : false;
-
-			puppeteer = puppeteer == 'true' ? true : false;
-
-
-
-			if (!url && !file) return ctx.badRequest("Url or file required", { message: 'Url or file required' });
-
-
-			const dbConfig = {
-				client: clientS,
-				tableName: 'documents',
-				query_name: 'match_documents_2',
-			};
-
-
-			// busco el cliente 
-
-			let clienteEmpresa = await strapi.db.query('api::client.client').findOne(
-
-				{
-					where: {
-						uuid: client,
-					//	user: user.id
-					},
-					select: ['id', 'name']
-				}
-
-			);
-
-
-
-			let nombreFile = file ? file.name.split('.')[0] : url.split('/').pop().split('#')[0].split('?')[0];
-
-
-			nombreFile = nombreFile.trim().replace(/[*+~.()'"!:@]/g, '').replace(/[_-]/g, ' ');
-			let fileNameNoExt = uuid() + '_' + nombreFile;
-
-			if (!clienteEmpresa) return ctx.badRequest("Client not found", { message: 'Client not found' });
-
-			let grupoIncrustacion = await strapi.db.query('api::grupo-de-incrustacion.grupo-de-incrustacion').findOne(
-
-				{
-					where: {
-						client: clienteEmpresa.id,
-						title: nombreFile,
-						create: user.id
-					},
-					select: ['id']
-				}
-
-			);
-
-			/*if (grupoIncrustacion) return ctx.badRequest("Group not found", { message: 'Un archivo bajo este nombre, cliente y generado por ti ya fue incrustado' });*/
-
-			if (!grupoIncrustacion) {
-
-				grupoIncrustacion = await strapi.db.query('api::grupo-de-incrustacion.grupo-de-incrustacion').create(
-					{
-
-						data: {
-							title: nombreFile,
-							client: clienteEmpresa.id,
-							create: user.id,
-						}
-
-					}
-				);
-
-			}
-
-			let buffer = null;
-			if (file) {
-				buffer = await fs.promises.readFile(file.path);
-
-
-
-				const createAndAssignTmpWorkingDirectoryToFiles = () => fse.mkdtemp(path.join(os.tmpdir(), 'strapi-upload-'));
-
-				const entity = {
-					name: `${file.name}`,
-					hash: fileNameNoExt,
-					ext: path.extname(file.name),
-					mime: file.type,
-					size: this.convbyteToKB(file.size),
-					provider: 'local',
-					tmpWorkingDirectory: await createAndAssignTmpWorkingDirectoryToFiles(),
-					getStream: () => Readable.from(buffer),
-					folderPath: '/1',
-					related: {
-						id: grupoIncrustacion.id,
-						__type: 'api::grupo-de-incrustacion.grupo-de-incrustacion',
-						__pivot: { field: 'media' }
-					}
-
-				};
-
-
-
-
-
-				await strapi.plugin('upload').service('upload').uploadFileAndPersist(entity)
-
-
-				file = await strapi
-					.query("plugin::upload.file")
-					.create({ data: entity });
-
-
-
-			}
-			const documentQueue = new DocumentSitemapQueue(
-				user,grupoIncrustacion.id
-				);
-
-			if (type == 'txt') {
-				
-				url = file;
-
-
-			}
-		
-
-
-
-			documentQueue.addDocumentToQueue( { urlOrTxt:url,nombreFile,clienteEmpresa,summarize,cleanHtml,puppeteer,user, grupoIncrustacion, filterUrl : [], blocksize : 0 , blocknum : 0, minLenChar : 200,recursivity:recursivity, type: type  } );
-
-
-
-
-
-			return ctx.send({ message: 'File uploaded' });
-
-
-
-		} catch (error) {
-			console.log(error);
-			// lanzo el error
-
-			 throw	error;
-		}
-
-
-	},
 	async createDocumtUrlIndividual(textSplitter, nombre, url, mode = 'cheerio', nameClient = null) {
 
 		try {

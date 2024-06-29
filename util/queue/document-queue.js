@@ -130,6 +130,7 @@ class DocumentSitemapQueue {
 			try {
 					let urls = await this.determineUrls(type, urlOrTxt, filterUrl, blocksize, blocknum, minLenChar);
 					if (urls.length === 0) {
+							console.log('No URLs found for processing');
 							job.moveToCompleted('done', true);
 							return;
 					}
@@ -138,6 +139,8 @@ class DocumentSitemapQueue {
 					let docs = await this.createDocumtUrlCrawler(nombreFile, urls, clienteEmpresa.name, {
 							limit, summarize, cleanHtml, puppeteer
 					});
+
+					console.log('docs', docs);
 	
 					let extraData = {
 							custom: true,
@@ -152,12 +155,13 @@ class DocumentSitemapQueue {
 					await this.processDocs(job, docs, embading, { ...dbConfig, extraData });
 					job.moveToCompleted('done', true);
 			} catch (error) {
-					console.error('Error processing document:', error.message);
+					console.log('Error processing document:', error.message);
 					job.moveToFailed({ message: 'job failed' });
 			}
 	}
 	
 	async determineUrls(type, urlOrTxt, filterUrl, blocksize, blocknum, minLenChar) {
+		console.log('determineUrls', type, urlOrTxt, filterUrl, blocksize, blocknum, minLenChar);
   switch (type) {
     case 'sitemap':
       // Lógica para cargar URLs desde un sitemap
@@ -261,7 +265,9 @@ determineLimit(recursivity, type) {
 	
 					// Inicializar y empezar el crawler.
 					// @ts-ignore
-					const crawler = new Crawler(urls, limit, puppeteer ? { puppeteer: true } : {});
+					const crawler = new Crawler(urls, limit ,200 , puppeteer);
+
+					console.log('crawler', crawler);
 					const pages = await crawler.start();
 	
 					// Procesar cada página extraída por el crawler.
