@@ -292,6 +292,14 @@ getFileNameFromUrl(url) {
 console.log(urlObj);
 	// Obtener el path de la URL y eliminar la primera barra
 let path = urlObj.pathname.slice(1).trim();
+
+if (path == '' || path == '/') {
+
+
+	path = urlObj.hostname;
+
+	return	path;
+}
 	// Dividir el path en segmentos
 	const segmentos = path.split('/');
 
