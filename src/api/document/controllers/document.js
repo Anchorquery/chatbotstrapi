@@ -31,6 +31,8 @@ const textSplitter = new RecursiveCharacterTextSplitter({
 
 const DocumentSitemapQueue = require("../../../../util/queue/document-queue.js");
 
+const DocumentTextQueue = require("../../../../util/queue/text-queue.js");
+
 module.exports = createCoreController('api::document.document', ({ strapi }) => ({
 
 
@@ -225,7 +227,7 @@ module.exports = createCoreController('api::document.document', ({ strapi }) => 
     // Emit message to user
     strapi.io.in(`user_${user.uuid}`).emit('messageTaskSchedule', { message: `Se encontraron urls` });
 
-    let { recursivity, summarize, cleanHtml, puppeteer, client, type, url } = ctx.request.body;
+    let { recursivity, summarize, cleanHtml, puppeteer, client, type, url, name } = ctx.request.body;
     let file = ctx.request.files ? ctx.request.files.file : null;
 
     console.log(ctx.request.body);
@@ -241,7 +243,7 @@ module.exports = createCoreController('api::document.document', ({ strapi }) => 
     const clienteEmpresa = await this.getClient(client);
     if (!clienteEmpresa) return ctx.badRequest("Client not found", { message: 'Client not found' });
 
-    let nombreFile = this.getFileName(file, url);
+    let nombreFile = name ? name : this.getFileName(file, url);
     let fileNameNoExt = `${uuid()}_${this.sanitizeFileName(nombreFile)}`;
 
     let grupoIncrustacion = await this.getOrCreateGrupoIncrustacion(clienteEmpresa, nombreFile, user.id, url, type);
@@ -269,6 +271,56 @@ module.exports = createCoreController('api::document.document', ({ strapi }) => 
     return ctx.send({ message: 'File uploaded' });
   } catch (error) {
     console.log(error);  }
+},
+
+async uploadTextEmbadding(ctx) {
+
+
+
+	try {
+
+		const { user } = ctx.state;
+
+		if (!user) return ctx.unauthorized("Unauthorized", { message: 'Unauthorized' });
+
+		const { text, client, type, name } = ctx.request.body;
+
+		if (!text) return ctx.badRequest("Text required", { message: 'Text required' });
+
+		const clienteEmpresa = await this.getClient(client);
+
+		if (!clienteEmpresa) return ctx.badRequest("Client not found", { message: 'Client not found' });
+
+		let nombreFile = name ? name : this.generateShortNameFromText(text);
+
+		let grupoIncrustacion = await this.getOrCreateGrupoIncrustacion(clienteEmpresa, nombreFile, user.id, text, type);
+
+		if (!grupoIncrustacion) {
+
+			return ctx.badRequest("Group creation failed", { message: 'Group creation failed' });
+
+		}
+
+		const documentQueue = new  DocumentTextQueue(user, grupoIncrustacion.id);
+
+		documentQueue.addDocumentToQueue({
+
+			text: text, nombreFile, clienteEmpresa, summarize: false, cleanHtml: false, puppeteer: false,
+
+			user, grupoIncrustacion, filterUrl: [], blocksize: 0, blocknum: 0,
+
+			minLenChar: 200, recursivity: false, type
+
+		});
+
+		return ctx.send({ message: 'File uploaded' });
+
+	} catch (error) {
+
+		console.log(error);
+
+	}
+
 },
 
 // Helper functions
@@ -320,8 +372,28 @@ if (path == '' || path == '/') {
 sanitizeFileName(fileName) {
   return fileName.trim().replace(/[*+~.()'"!:@]/g, '').replace(/[_-]/g, ' ');
 },
+generateShortNameFromText(text, maxLength = 10) {
+	// Eliminar espacios al inicio y al final del texto y convertirlo a minúsculas
+	let cleanText = text.trim().toLowerCase();
 
-async getOrCreateGrupoIncrustacion(clienteEmpresa, nombreFile, userId, url, type) {
+	// Reemplazar caracteres especiales y espacios múltiples con un solo espacio
+	cleanText = cleanText.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, ' ');
+
+	// Dividir el texto en palabras
+	const words = cleanText.split(' ');
+
+	// Tomar la primera letra de cada palabra y unirlas
+	let shortName = words.map(word => word.charAt(0).toUpperCase()).join('');
+
+	// Si el nombre generado es más largo que maxLength, cortarlo
+	if (shortName.length > maxLength) {
+			shortName = shortName.slice(0, maxLength);
+	}
+
+	return shortName;
+}
+,
+async getOrCreateGrupoIncrustacion(clienteEmpresa, nombreFile, userId, info, type) {
   let grupoIncrustacion = await strapi.db.query('api::grupo-de-incrustacion.grupo-de-incrustacion').findOne({
     where: { client: clienteEmpresa.id, title: nombreFile, create: userId },
     select: ['id']
@@ -329,9 +401,14 @@ async getOrCreateGrupoIncrustacion(clienteEmpresa, nombreFile, userId, url, type
 
   if (!grupoIncrustacion) {
     let data = { title: nombreFile, client: clienteEmpresa.id, create: userId };
-    if (url) {
-      data.remote_url = url;
+    if (type == 'url') {
+      data.remote_url =  info;
     }
+
+				if (type == 'text') {
+					data.text = info;
+				}
+
     grupoIncrustacion = await strapi.db.query('api::grupo-de-incrustacion.grupo-de-incrustacion').create({
       data: { ...data, type }
     });

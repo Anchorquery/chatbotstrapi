@@ -26,6 +26,7 @@ const { processImageMessage } = require("../util/chat/handleFileMessage");
 const { ProgressSimulator } = require("../util/common/progressSimulator");
 const { handleMessageChainCreate } = require("../util/gpt/handleMessageCreate");
 
+
 const { OPENAI_API_KEY } = process.env;
 let { URL } = process.env;
 
@@ -223,7 +224,37 @@ module.exports = {
 
                 // creo un nuevo chat
                 sala = uuidv4();
-                let nameSala = new Date().toISOString().split('T')[0] + ' Untitled'
+                let nombre_menssage = new Date().toISOString().split('T')[0] + ' Untitled'
+
+                // verifico si el mensaje es un string
+
+                if (typeof message  === 'string') {
+
+                  // limpio de todo html y lo convierto a texto
+
+                  nombre_menssage = convert(message, {
+
+                    wordwrap: 130
+
+                  })
+
+                  // verifico si el mensaje es mayor a 130 caracteres
+
+                  if (nombre_menssage.length > 130) {
+
+                    // corto el mensaje a 130 caracteres
+
+                    nombre_menssage = nombre_menssage.substring(0, 130) + '...';
+
+                  }
+
+
+
+                }
+
+
+              
+
                 await strapi.db.query('api::chat.chat').create({
 
                   data: {
@@ -232,12 +263,12 @@ module.exports = {
                     user: socket.user.id,
                     uuid: sala,
                     // nombre de la forma 2024-02-21 Untitled
-                    name: nameSala,
-                    lastMessage: convert(message, {
+                    name: nombre_menssage,
+                    /*lastMessage: convert(message, {
 
                       wordwrap: 130
 
-                    }),
+                    }),*/
 
 
                   }
@@ -264,7 +295,7 @@ module.exports = {
 
                   })
                 }
-                socket.emit('newChat', { sala, name: nameSala })
+                socket.emit('newChat', { sala, name: nombre_menssage })
               } else {
 
                 //verifico que sala no sea string
@@ -341,7 +372,7 @@ module.exports = {
               if (type == 'text' || type == 'chat') {
                 // Llamar a la función verificarPeticion para analizar el mensaje
                 let result = await verificarPeticion(message);
-                console.log({ result });
+                
 
                 // Verificar si hay intención de generar una imagen
                 if (result.is_image && result.is_post == false) {
@@ -619,6 +650,8 @@ module.exports = {
 
               let { message, idGpt, client, state, creation_steps, clientName } = data;
 
+              console.log({ message, idGpt, client, state, creation_steps, clientName });
+
 
               if (!message) {
 
@@ -705,23 +738,64 @@ module.exports = {
               let response = await handleMessageChainCreate({ message, context: "", client, clientName, prompt }, model);
 
 
-              // actualizo el estado del gpt
+              let gptData = null;
+
+              if (idGpt){
+                gptData = await strapi.db.query('api::gpt.gpt').update({
+
+                  where: {
+                    id: idGpt
+                  },
+                  data: {
+                    prompt: response.instrucciones,
+                    creation_steps: "dos",
+                    description: response.descripcion,
+                    conversation_starters: response.iniciadores_de_conversacion,
+                    state: "published"
+                  }
+  
+                });
+              }else{
+                
+                // busco el cliente que solo tengo su uuid
+
+                client = await strapi.db.query('api::client.client').findOne({
+
+                  where: {
+
+                    uuid: client
+
+                  }
+
+                });
 
 
-              let gptData = await strapi.db.query('api::gpt.gpt').update({
 
-                where: {
-                  id: idGpt
-                },
-                data: {
-                  prompt: response.instrucciones,
-                  creation_steps: "dos",
-                  description: response.descripcion,
-                  conversation_starters: response.iniciadores_de_conversacion,
-                  state: "published"
-                }
+                gptData = await strapi.db.query('api::gpt.gpt').create({
 
-              });
+                  data: {
+
+                    // @ts-ignore
+
+                    client: client.id,
+
+                    title: 'Gpt ' + clientName ,
+
+                    prompt: response.instrucciones,
+
+                    description: response.descripcion,
+
+                    conversation_starters: response.iniciadores_de_conversacion,
+
+                    state: "published",
+
+                    creation_steps: "dos"
+
+                  }
+
+                });
+              }
+
 
 
               // emito el mensaje de respuesta

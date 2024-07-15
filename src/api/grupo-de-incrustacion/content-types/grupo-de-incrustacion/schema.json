@@ -98,6 +98,9 @@
     },
     "driveId": {
       "type": "string"
+    },
+    "text": {
+      "type": "richtext"
     }
   }
 }

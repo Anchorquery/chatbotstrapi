@@ -1,8 +1,8 @@
 
 'use strict';
 /**
-	* chat controller
-	*/
+  * chat controller
+  */
 const { OpenAI } = require("langchain/llms/openai");
 const { BufferMemory } = require("langchain/memory");
 const { ConversationChain } = require("langchain/chains");
@@ -15,695 +15,850 @@ const { OPENAI_API_KEY } = process.env;
 
 module.exports = createCoreController('api::chat.chat', ({ strapi }) => ({
 
-	async find(ctx) {
+  async find(ctx) {
 
-		const { user } = ctx.state;
+    const { user } = ctx.state;
 
-		if (!user) return ctx.unauthorized("Unauthorized");
+    if (!user) return ctx.unauthorized("Unauthorized");
 
 
-		let { _limit, _page, _sort, _q, _where, _client, _isMe, _type } = ctx.query;
+    let { _limit, _page, _sort, _q, _where, _client, _isMe, _type } = ctx.query;
 
-		_limit = _limit ? parseInt(_limit) : 10;
-		_page = _page ? parseInt(_page) : 1;
-		_sort = _sort ? _sort : 'createdAt:desc';
-		_q = _q ? _q : '';
+    _limit = _limit ? parseInt(_limit) : 10;
+    _page = _page ? parseInt(_page) : 1;
+    _sort = _sort ? _sort : 'createdAt:desc';
+    _q = _q ? _q : '';
 
 
-		const _offset = (_page - 1) * _limit;
-		let _items = [];
-		let where = {
+    const _offset = (_page - 1) * _limit;
+    let _items = [];
+    let where = {
 
-		};
+    };
 
-		if (_type !== null && _type !== undefined && _type !== "null" && _type) {
-			where.type = _type;
-		}
+    if (_type !== null && _type !== undefined && _type !== "null" && _type) {
+      where.type = _type;
+    }
 
-		if (_isMe) {
-			where.user = user.id;
-		}
+    if (_isMe) {
+      where.user = user.id;
+    }
 
-		if (_q) {
-			where.name = {
-				$containsi: _q
-			}
-		}
+    if (_q) {
+      where.name = {
+        $containsi: _q
+      }
+    }
 
-		_items = await strapi.db.query('api::chat.chat').findWithCount({
-			limit: _limit,
-			offset: _offset,
-			where: where,
-			populate: ['user'],
-		});
+    _items = await strapi.db.query('api::chat.chat').findWithCount({
+      limit: _limit,
+      offset: _offset,
+      where: where,
+      populate: ['user'],
+    });
 
 
 
-		const _total = _items[1];
+    const _total = _items[1];
 
-		// @ts-ignore
-		_items = _items[0];
+    // @ts-ignore
+    _items = _items[0];
 
 
 
-		const _lastPage = Math.ceil(_total / _limit);
-		return ctx.send({ data: _items, meta: { pagination: { page: _page, limit: _limit, total: _total, lastPage: _lastPage } } });
+    const _lastPage = Math.ceil(_total / _limit);
+    return ctx.send({ data: _items, meta: { pagination: { page: _page, limit: _limit, total: _total, lastPage: _lastPage } } });
 
-	},
+  },
+  async create(ctx) {
+    const { user } = ctx.state;
 
-	async create(ctx) {
+    if (!user) return ctx.unauthorized("Unauthorized");
 
+    // Recibo el mensaje del usuario
+    const { prompt, type, tone, language, temperature, isGpt } = ctx.request.body.data;
 
-		const { user } = ctx.state;
+    strapi.log.debug({ prompt, type, tone, language, temperature });
 
-		if (!user) return ctx.unauthorized("Unauthorized");
+    // Generar el nombre base con la fecha actual
+    const baseName = `Chat_${new Date().toISOString().split('T')[0]}`;
 
+    // Verificar si ya existe un chat con un nombre similar
+    let existingChats = await strapi.db.query('api::chat.chat').findMany(
 
-		// recibo el mensaje del usuario
+      {
+        where: {
 
-		const { prompt, type, tone, language, temperature } = ctx.request.body.data;
+          name: {
 
+            $containsi: baseName
 
-		strapi.log.debug({ prompt, type, tone, language, temperature });
+          }
 
+        }
+      }
 
 
 
+    );
 
+    let name = baseName;
+    if (existingChats.length > 0) {
+      name = `${baseName}_${existingChats.length + 1}`;
+    }
 
+    // Generar un UUID para el nuevo chat
+    const chatUUID = uuidv4();
 
+    // Crear el chat sin mensajes si los datos llegan vacíos no los sumo
+    let datos = {
+      uuid: chatUUID,
+      user: user.id,
+      type: type ? type : 'chat',
+      name: name,
+      lastModification: new Date(),
+    };
 
-	},
-	async config(ctx) {
+    // Crear el nuevo chat en la base de datos
+    await strapi.db.query('api::chat.chat').create(
 
+      {
+        data : datos
+      }
 
+    );
 
-	},
+    // Devolver la respuesta con el UUID del nuevo chat creado
+    ctx.send({
+      uuid: chatUUID,
+      name : name,
+      tool: isGpt ? 'chatGpt' : 'chat'
+    });
+  },
 
-	async createCopy(ctx) {
 
-		const { user } = ctx.state;
+  async createCopy(ctx) {
 
-		if (!user) return ctx.unauthorized("Unauthorized");
+    const { user } = ctx.state;
 
-		// saco los datos 
+    if (!user) return ctx.unauthorized("Unauthorized");
 
-		let { language, tone, temperature, variation, type, prompt, description } = ctx.request.body.data;
+    // saco los datos
 
-		if (!prompt) return ctx.badRequest("Prompt is required");
+    let { language, tone, temperature, variation, type, prompt, description } = ctx.request.body.data;
 
-		if (!language) language = 'es';
+    if (!prompt) return ctx.badRequest("Prompt is required");
 
-		if (!tone) return ctx.badRequest("Tone is required");
+    if (!language) language = 'es';
 
-		if (!temperature) return ctx.badRequest("Temperature is required");
+    if (!tone) return ctx.badRequest("Tone is required");
 
-		if (!description) return ctx.badRequest("Variation is required");
+    if (!temperature) return ctx.badRequest("Temperature is required");
 
+    if (!description) return ctx.badRequest("Variation is required");
 
 
-		if (!variation) variation = 1;
 
+    if (!variation) variation = 1;
 
-		if (!type) type = 'copy';
 
+    if (!type) type = 'copy';
 
-		// busco por uuid la temperatura api::temperature.temperature
 
-		const temperatureModel = await strapi.db.query('api::temperature.temperature').findOne({
+    // busco por uuid la temperatura api::temperature.temperature
 
-			where: {
+    const temperatureModel = await strapi.db.query('api::temperature.temperature').findOne({
 
-				uuid: temperature
+      where: {
 
-			}
+        uuid: temperature
 
-		});
+      }
 
-		if (!temperatureModel) return ctx.badRequest("Temperature not found");
+    });
 
+    if (!temperatureModel) return ctx.badRequest("Temperature not found");
 
-		// busco por uuid el tono api::tone.tone
 
-		const toneModel = await strapi.db.query('api::tone.tone').findOne({
+    // busco por uuid el tono api::tone.tone
 
-			where: {
+    const toneModel = await strapi.db.query('api::tone.tone').findOne({
 
-				uuid: tone
+      where: {
 
-			},
+        uuid: tone
 
-		});
+      },
 
-		if (!toneModel) return ctx.badRequest("Tone not found");
+    });
 
+    if (!toneModel) return ctx.badRequest("Tone not found");
 
-		// reemplazo el tono y temperatura de ctx.request.body.data
 
-		ctx.request.body.data.tone = toneModel;
+    // reemplazo el tono y temperatura de ctx.request.body.data
 
-		ctx.request.body.data.temperature = temperatureModel;
+    ctx.request.body.data.tone = toneModel;
 
-		// busco el promptTemplate en la base de datos 
+    ctx.request.body.data.temperature = temperatureModel;
 
-		const promptTemplate = await strapi.db.query('api::prompt.prompt').findOne({
+    // busco el promptTemplate en la base de datos
 
-			where: {
-				uuid: prompt
-			},
+    const promptTemplate = await strapi.db.query('api::prompt.prompt').findOne({
 
-			select: ['content']
+      where: {
+        uuid: prompt
+      },
 
+      select: ['content']
 
 
-		});
 
+    });
 
 
-		const iaConfig = await this.configureLangChainChat(ctx);
 
+    const iaConfig = await this.configureLangChainChat(ctx);
 
-		let template = promptTemplate.content;
 
-		// añado un texto indicando que responsa en languaje (que es el idioma seleccionado por el usuario) y con el tono (que es el tono seleccionado por el usuario)
+    let template = promptTemplate.content;
 
+    // añado un texto indicando que responsa en languaje (que es el idioma seleccionado por el usuario) y con el tono (que es el tono seleccionado por el usuario)
 
 
-		template = template + `\n respuesta siempre en: {language} \n usando un tono : {tone} en la conversacion \n , formatea la respuesta en texto enriquecido`;
 
-		const initializedPrompt = new PromptTemplate({ template, inputVariables: ["language", "tone"] });
+    template = template + `\n respuesta siempre en: {language} \n usando un tono : {tone} en la conversacion \n , formatea la respuesta en texto enriquecido`;
 
-		// formateo el promptTemplate
+    const initializedPrompt = new PromptTemplate({ template, inputVariables: ["language", "tone"] });
 
-		const initialPrompt = await initializedPrompt.format({ language: this.configureLanguaje(language), tone: toneModel.title });
+    // formateo el promptTemplate
 
-		let history = [];
+    const initialPrompt = await initializedPrompt.format({ language: this.configureLanguaje(language), tone: toneModel.title });
 
-		let respuesta = await iaConfig.chain.call({ input: initialPrompt });
+    let history = [];
 
+    let respuesta = await iaConfig.chain.call({ input: initialPrompt });
 
-		history.push({ message: initialPrompt, response: respuesta.response });
-		respuesta = await iaConfig.chain.call({ input: description });
-		history.push({ message: description, response: respuesta.response });
 
-		// guardo en la base de datos todo, creando un chat 
+    history.push({ message: initialPrompt, response: respuesta.response });
+    respuesta = await iaConfig.chain.call({ input: description });
+    history.push({ message: description, response: respuesta.response });
 
-		const chat = await strapi.db.query('api::chat.chat').create({
+    // guardo en la base de datos todo, creando un chat
 
-			data: {
+    const chat = await strapi.db.query('api::chat.chat').create({
 
-				user: user.id,
+      data: {
 
-				prompt: promptTemplate.id,
+        user: user.id,
 
-				temperature: temperatureModel.id,
+        prompt: promptTemplate.id,
 
-				tone: toneModel.id,
+        temperature: temperatureModel.id,
 
-				language: language,
+        tone: toneModel.id,
 
-				history: JSON.stringify(history),
+        language: language,
 
-				type: type,
+        history: JSON.stringify(history),
 
-				description: description,
+        type: type,
 
-				uuid: uuidv4(),
-				iaConfig: JSON.stringify(iaConfig),
-				config: {
-					language: language,
-					tone: toneModel,
-					temperature: temperatureModel,
-					variation: variation,
-					type: type,
-				}
+        description: description,
 
+        uuid: uuidv4(),
+        iaConfig: JSON.stringify(iaConfig),
+        config: {
+          language: language,
+          tone: toneModel,
+          temperature: temperatureModel,
+          variation: variation,
+          type: type,
+        }
 
-			}
 
-		});
+      }
 
-		let uuidDocument = uuidv4();
-		await Promise.all([strapi.db.query('api::message.message').create({
+    });
 
-			data: {
+    let uuidDocument = uuidv4();
+    await Promise.all([strapi.db.query('api::message.message').create({
 
-				content: description,
-				messageRaw: JSON.stringify(description),
-				datetime: new Date(),
-				type: 'text',
-				chat: chat.id,
-				user: user.id,
-				sender: 'user',
-			}
+      data: {
 
-		}), strapi.db.query('api::message.message').create({
+        content: description,
+        messageRaw: JSON.stringify(description),
+        datetime: new Date(),
+        type: 'text',
+        chat: chat.id,
+        user: user.id,
+        sender: 'user',
+      }
 
-			data: {
+    }), strapi.db.query('api::message.message').create({
 
-				content: respuesta.response,
-				messageRaw: JSON.stringify(respuesta.response),
-				datetime: new Date(),
-				type: 'text',
-				chat: chat.id,
-				user: user.id,
-				sender: 'ia',
-			}
+      data: {
 
-		}), await strapi.db.query('api::document-file.document-file').create({
+        content: respuesta.response,
+        messageRaw: JSON.stringify(respuesta.response),
+        datetime: new Date(),
+        type: 'text',
+        chat: chat.id,
+        user: user.id,
+        sender: 'ia',
+      }
 
-			data: {
+    }), await strapi.db.query('api::document-file.document-file').create({
 
-				title: "Nuevo documento",
-				content: respuesta.response,
-				create: user.id,
-				uuid: uuidDocument,
-			}
-		})]);
+      data: {
 
-		// creo el documento
+        title: "Nuevo documento",
+        content: respuesta.response,
+        create: user.id,
+        uuid: uuidDocument,
+      }
+    })]);
 
+    // creo el documento
 
 
 
 
-		return ctx.send({ chat: chat.uuid, document: uuidDocument });
-	},
-	async findOne(ctx) {
 
-		const { user } = ctx.state;
+    return ctx.send({ chat: chat.uuid, document: uuidDocument });
+  },
+  async findOne(ctx) {
 
-		if (!user) return ctx.unauthorized("Unauthorized", { error: "Unauthorized" });
+    const { user } = ctx.state;
 
-		let { id } = ctx.params;
+    if (!user) return ctx.unauthorized("Unauthorized", { error: "Unauthorized" });
 
+    let { id } = ctx.params;
 
 
-		if (!id) return ctx.badRequest("Chat is required", { error: "Chat is required" });
 
-		// busco el chat en la base de datos 
+    if (!id) return ctx.badRequest("Chat is required", { error: "Chat is required" });
 
-		const chatModel = await strapi.db.query('api::chat.chat').findOne({
+    // busco el chat en la base de datos
 
-			where: {
+    const chatModel = await strapi.db.query('api::chat.chat').findOne({
 
-				uuid: id,
-				user: user.id
+      where: {
 
-			},
+        uuid: id,
+        user: user.id
 
-		});
+      },
 
-		let messages = await strapi.db.query('api::message.message').findMany({
+    });
 
-			where: {
+    let messages = await strapi.db.query('api::message.message').findMany({
 
-				chat: chatModel.id
+      where: {
 
-			},
+        chat: chatModel.id
 
+      },
 
-		});
 
-		for (let i = 0; i < messages.length; i++) {
+    });
 
-			delete messages[i].embedding;
+    for (let i = 0; i < messages.length; i++) {
 
-		}
+      delete messages[i].embedding;
 
+    }
 
-		// busco el prompt asociado al chat 
 
+    // busco el prompt asociado al chat
 
-		/*const prompt = await strapi.db.query('api::prompt.prompt').findOne({
 
-			where: {
+    /*const prompt = await strapi.db.query('api::prompt.prompt').findOne({
 
-				id: chatModel.config.prompt.id,
+      where: {
 
-			},
+        id: chatModel.config.prompt.id,
 
-			select : ['title']
+      },
 
-		});*/
+      select : ['title']
 
-		// saco el mensaje
-		let titulo = "";
-		if (messages[0]) {
-			titulo = messages[0].content
-			titulo = convert(titulo, { wordwrap: 130 });
+    });*/
 
+    // saco el mensaje
+    let titulo = "";
+    if (messages[0]) {
+      titulo = messages[0].content
+      titulo = convert(titulo, { wordwrap: 130 });
 
-			titulo = titulo.substring(0, 30) + '...';
 
+      titulo = titulo.substring(0, 30) + '...';
 
 
 
-		}
 
+    }
 
-	/* verifico que chatModel.config exista . Si existe chatModel.config.configuracion  debe existir sino lo creo y añado estos valores cantidad: {
-				vectoresMensaje: 5,
-				mensajesHistorial: 10
-			}*/
-			if (!chatModel.config) {
 
-				chatModel.config = {
+    /* verifico que chatModel.config exista . Si existe chatModel.config.configuracion  debe existir sino lo creo y añado estos valores cantidad: {
+          vectoresMensaje: 5,
+          mensajesHistorial: 10
+        }*/
+    if (!chatModel.config) {
 
-					configuracion: {
+      chatModel.config = {
 
-						cantidad: {
+        configuracion: {
 
-							vectoresMensaje: 5,
+          cantidad: {
 
-							mensajesHistorial: 10
+            vectoresMensaje: 5,
 
-						}
+            mensajesHistorial: 10
 
-					},
+          }
 
-					cliente: {
+        },
 
-						name: "Cliente no asignado",
-						uuid : null
-					}
+        cliente: {
 
-				}
+          name: "Cliente no asignado",
+          uuid: null
+        }
 
-			}
-		if (!chatModel.config.configuracion) {
+      }
 
-			chatModel.config.configuracion = {
+    }
+    if (!chatModel.config.configuracion) {
 
-				cantidad: {
+      chatModel.config.configuracion = {
 
-					vectoresMensaje: 5,
+        cantidad: {
 
-					mensajesHistorial: 10
+          vectoresMensaje: 5,
 
-				}
+          mensajesHistorial: 10
 
-			}
+        }
 
-		}
+      }
 
+    }
 
 
 
-		return ctx.send({ messages: messages, prompt: titulo, name: chatModel.name, description: chatModel.description, config: chatModel.config, chat: chatModel.uuid });
 
+    return ctx.send({ messages: messages, prompt: titulo, name: chatModel.name, description: chatModel.description, config: chatModel.config, chat: chatModel.uuid });
 
 
-	},
 
-	configureLanguaje(language) {
+  },
 
-		if (!language) language = 'es';
+  configureLanguaje(language) {
 
-		if (language === 'es') {
+    if (!language) language = 'es';
 
-			language = 'Español';
+    if (language === 'es') {
 
-		} else if (language === 'en') {
+      language = 'Español';
 
-			language = 'Ingles';
+    } else if (language === 'en') {
 
-		} else {
+      language = 'Ingles';
 
-			language = 'Euskera';
+    } else {
 
-		}
+      language = 'Euskera';
 
-		return language;
-	},
+    }
 
-	configureLangChainChat(ctx) {
+    return language;
+  },
 
-		const { user } = ctx.state;
+  configureLangChainChat(ctx) {
 
-		let { language, tone, temperature, variation, type } = ctx.request.body.data;
+    const { user } = ctx.state;
 
-		if (!user) return ctx.unauthorized("Unauthorized");
+    let { language, tone, temperature, variation, type } = ctx.request.body.data;
 
-		if (!language) language = 'es';
+    if (!user) return ctx.unauthorized("Unauthorized");
 
-		if (language === 'es') {
+    if (!language) language = 'es';
 
-			language = 'Español';
+    if (language === 'es') {
 
-		} else if (language === 'en') {
+      language = 'Español';
 
-			language = 'Ingles';
+    } else if (language === 'en') {
 
-		} else {
+      language = 'Ingles';
 
-			language = 'Euskera';
+    } else {
 
-		}
+      language = 'Euskera';
 
-		if (!tone) tone = 0.5;
+    }
 
-		if (!temperature) temperature = 0.7;
+    if (!tone) tone = 0.5;
 
-		if (!variation) variation = 1;
+    if (!temperature) temperature = 0.7;
 
-		if (!type) type = 'chat';
+    if (!variation) variation = 1;
 
-		let topP = typeof temperature === 'object' ? temperature.topP : 1;
+    if (!type) type = 'chat';
 
-		temperature = typeof temperature === 'object' ? temperature.temperature : temperature;
+    let topP = typeof temperature === 'object' ? temperature.topP : 1;
 
+    temperature = typeof temperature === 'object' ? temperature.temperature : temperature;
 
-		const memory = new BufferMemory();
 
-		const model = new OpenAI({
-			openAIApiKey: OPENAI_API_KEY,
-			modelName: "gpt-3.5-turbo",
-			temperature: temperature,
-			timeout: 90000,
-			topP: topP,
-			maxTokens: -1,
-			verbose: true,
-			n: variation,
-			streaming: type === 'chat' ? true : false,
+    const memory = new BufferMemory();
 
-		});
+    const model = new OpenAI({
+      openAIApiKey: OPENAI_API_KEY,
+      modelName: "gpt-3.5-turbo",
+      temperature: temperature,
+      timeout: 90000,
+      topP: topP,
+      maxTokens: -1,
+      verbose: true,
+      n: variation,
+      streaming: type === 'chat' ? true : false,
 
-		const chain = new ConversationChain({
-			llm: model,
-			memory: memory,
-		});
+    });
 
-		return {
-			chain: chain,
-			memory: memory,
-			model: model,
-		}
-	},
+    const chain = new ConversationChain({
+      llm: model,
+      memory: memory,
+    });
 
-	async delete(ctx) {
+    return {
+      chain: chain,
+      memory: memory,
+      model: model,
+    }
+  },
 
-		// verifico este logueado
+  async delete(ctx) {
 
-		const { user } = ctx.state;
+    // verifico este logueado
 
-		if (!user) return ctx.unauthorized("Unauthorized", { error: "Unauthorized" });
+    const { user } = ctx.state;
 
+    if (!user) return ctx.unauthorized("Unauthorized", { error: "Unauthorized" });
 
-		// saco el id del chat
 
-		const { id } = ctx.params;
+    // saco el id del chat
 
-		if (!id) return ctx.badRequest("Chat is required", { error: "Chat is required" });
+    const { id } = ctx.params;
 
+    if (!id) return ctx.badRequest("Chat is required", { error: "Chat is required" });
 
-		// busco el chat en la base de datos
 
+    // busco el chat en la base de datos
 
-		const chatModel = await strapi.db.query('api::chat.chat').findOne({
 
-			where: {
+    const chatModel = await strapi.db.query('api::chat.chat').findOne({
 
-				uuid: id,
-				user: user.id
+      where: {
 
-			},
+        uuid: id,
+        user: user.id
 
+      },
 
 
-		});
 
-		if (!chatModel) return ctx.badRequest("Chat not found", { error: "Chat not found" });
+    });
 
+    if (!chatModel) return ctx.badRequest("Chat not found", { error: "Chat not found" });
 
-		//	borro el chat
 
+    //	borro el chat
 
 
-		// elimino todos los mensajes del chat
 
-		// busco todos los mensajes del chat
+    // elimino todos los mensajes del chat
 
-		const messages = await strapi.db.query('api::message.message').findMany({
+    // busco todos los mensajes del chat
 
-			where: {
+    const messages = await strapi.db.query('api::message.message').findMany({
 
-				chat: chatModel.id,
+      where: {
 
-			},
+        chat: chatModel.id,
 
-			limit: 5000,
+      },
 
-		});
+      limit: 5000,
 
-		// losr ecorro y elimino usando bluebird
+    });
 
-		await Promise.map(messages, async (message) => {
+    // losr ecorro y elimino usando bluebird
 
-			await strapi.db.query('api::message.message').delete({
+    await Promise.map(messages, async (message) => {
 
-				where: {
+      await strapi.db.query('api::message.message').delete({
 
-					id: message.id,
+        where: {
 
-				},
+          id: message.id,
 
-			});
+        },
 
-		});
+      });
 
-		/*	await strapi.db.query('api::message.message').deleteMany({
-				where: {
-					chat: {
-							id: chatModel.id
-						},
-				},
-		});*/
+    });
 
+    /*	await strapi.db.query('api::message.message').deleteMany({
+        where: {
+          chat: {
+              id: chatModel.id
+            },
+        },
+    });*/
 
 
-		await strapi.db.query('api::chat.chat').delete({
 
-			where: {
+    await strapi.db.query('api::chat.chat').delete({
 
-				uuid: id,
+      where: {
 
-			},
+        uuid: id,
 
-		});
+      },
 
-		return ctx.send({ message: "Chat deleted" });
+    });
 
-	},
+    return ctx.send({ message: "Chat deleted" });
 
+  },
 
-	async updateTitle(ctx) {
+  async deleteMany (ctx) {
 
+    // verifico este logueado
 
-		const { user } = ctx.state;
+    const { user } = ctx.state;
 
-		if (!user) return ctx.unauthorized("Unauthorized", { error: "Unauthorized" });
+    if (!user) return ctx.unauthorized("Unauthorized", { error: "Unauthorized" });
 
-		const { uuid } = ctx.params;
+    /// recibo los items a borrar
 
-		if (!uuid) return ctx.badRequest("Chat is required", { error: "Chat is required" });
+    const { items } = ctx.request.body.data;
 
-		const { name } = ctx.request.body.data;
+    if (!items) return ctx.badRequest("Items are required", { error: "Items are required" });
 
-		if (!name) return ctx.badRequest("Title is required", { error: "Title is required" });
+    // recorro los items y los elimino
 
-		await strapi.db.query('api::chat.chat').update({
+    await Promise.map(items, async (item) => {
 
-			where: {
+      // busco todos los mensajes del chat
 
-				uuid: uuid,
+      const messages = await strapi.db.query('api::message.message').findMany({
 
-			},
+        where: {
 
-			data: {
+          chat: item,
 
-				name: name,
+        },
 
-			},
+        limit: 5000,
 
-		});
+      });
 
-		return ctx.send({ message: "Title updated" });
+      // losr ecorro y elimino usando bluebird
 
+      await Promise.map(messages, async (message) => {
 
+        await strapi.db.query('api::message.message').delete({
 
-	},
-	async updateConfig(ctx) {
+          where: {
 
+            id: message.id,
 
-		const { user } = ctx.state;
+          },
 
-		if (!user) return ctx.unauthorized("Unauthorized", { error: "Unauthorized" });
+        });
 
-		const { uuid } = ctx.params;
+      });
 
-		if (!uuid) return ctx.badRequest("Chat is required", { error: "Chat is required" });
+    });
 
-		const { client, configuracion } = ctx.request.body.data;
 
-		console.log(ctx.request.body.data);
 
+    await strapi.db.query("api::chat.chat").deleteMany({
+      where: {
+        id: {
+          $in : items
+        }
 
+      },
+    });
 
-		if (!configuracion) return ctx.badRequest("Config is required", { error: "Config is required" });
-		let clientModel = null;
-		if(client?.uuid){
-			clientModel = await strapi.db.query('api::client.client').findOne({
+    // elimino sus mensajes
 
-				where: {
-	
-					uuid: client.uuid,
-	
-				},
-	
-			});
-console.log(clientModel);
-			if (!clientModel) return ctx.badRequest("Client not found", { error: "Client not found" });
-		}
 
 
+    return ctx.send({ message: "Items deleted" });
 
+  },
 
-		
 
-		await strapi.db.query('api::chat.chat').update({
+  async updateTitle(ctx) {
 
-			where: {
 
-				uuid: uuid,
+    const { user } = ctx.state;
 
-			},
+    if (!user) return ctx.unauthorized("Unauthorized", { error: "Unauthorized" });
 
-			data: {
+    const { uuid } = ctx.params;
 
-				config: {
-					
-					configuracion: {
-						...configuracion,
-					
-					},
+    if (!uuid) return ctx.badRequest("Chat is required", { error: "Chat is required" });
 
-					cliente:	client,	
-				},
+    const { name } = ctx.request.body.data;
 
-				// añado client si existe 
+    if (!name) return ctx.badRequest("Title is required", { error: "Title is required" });
 
-				client: clientModel ? clientModel.id : null,
+    await strapi.db.query('api::chat.chat').update({
 
-			},
+      where: {
 
-		});
+        uuid: uuid,
 
-		return ctx.send({ message: "Chat updated" });
+      },
 
+      data: {
 
+        name: name,
 
-	}
+      },
+
+    });
+
+    return ctx.send({ message: "Title updated" });
+
+
+
+  },
+  async updateConfig(ctx) {
+
+
+    const { user } = ctx.state;
+
+    if (!user) return ctx.unauthorized("Unauthorized", { error: "Unauthorized" });
+
+    const { uuid } = ctx.params;
+
+    if (!uuid) return ctx.badRequest("Chat is required", { error: "Chat is required" });
+
+    const { client, configuracion , title } = ctx.request.body.data;
+
+    console.log(ctx.request.body.data);
+
+
+
+    if (!configuracion) return ctx.badRequest("Config is required", { error: "Config is required" });
+    let clientModel = null;
+    if (client?.uuid) {
+      clientModel = await strapi.db.query('api::client.client').findOne({
+
+        where: {
+
+          uuid: client.uuid,
+
+        },
+
+      });
+      console.log(clientModel);
+      if (!clientModel) return ctx.badRequest("Client not found", { error: "Client not found" });
+    }
+
+
+
+
+
+
+    await strapi.db.query('api::chat.chat').update({
+
+      where: {
+
+        uuid: uuid,
+
+      },
+
+      data: {
+
+        config: {
+
+          configuracion: {
+            ...configuracion,
+
+          },
+
+
+
+          cliente: client,
+        },
+
+
+        client: clientModel ? clientModel.id : null,
+
+
+
+        name: title ,
+
+      },
+
+    });
+
+    return ctx.send({ message: "Chat updated" });
+
+
+
+  },
+
+  // una para obtener datos del chat solamente
+
+  async getChatData(ctx) {
+
+    const { user } = ctx.state;
+
+    if (!user) return ctx.unauthorized("Unauthorized", { error: "Unauthorized" });
+
+    const { uuid } = ctx.params;
+
+    if (!uuid) return ctx.badRequest("Chat is required", { error: "Chat is required" });
+
+    const chatModel = await strapi.db.query('api::chat.chat').findOne({
+
+      where: {
+
+        uuid: uuid,
+
+      },
+
+      populate: ['client']
+
+    });
+
+    // si tiene cliente solo mando el id, el uuid y el nombre
+
+    if (chatModel.client) {
+
+      chatModel.client = {
+
+        id: chatModel.client.id,
+        uuid: chatModel.client.uuid,
+        name: chatModel.client.name,
+
+      }
+
+    }
+
+    if (!chatModel) return ctx.badRequest("Chat not found", { error: "Chat not found" });
+
+    return ctx.send({  data : chatModel });
+
+  },
 
 
 }));

@@ -32,7 +32,7 @@ const dbConfig = {
 	tableName: 'documents',
 	query_name: 'match_documents_2',
 };
-class DocumentSitemapQueue {
+class DocumentTextQueue {
   constructor(user, groupIncrust) {
     this.user = user;
     this.groupIncrust = groupIncrust;
@@ -337,4 +337,4 @@ determineLimit(recursivity, type) {
 	
 }
 
-module.exports = DocumentSitemapQueue;
+module.exports = DocumentTextQueue;

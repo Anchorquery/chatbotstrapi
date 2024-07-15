@@ -16,9 +16,6 @@
       "type": "string",
       "configurable": false
     },
-    "history": {
-      "type": "json"
-    },
     "user": {
       "type": "relation",
       "relation": "oneToOne",
@@ -59,6 +56,10 @@
       "type": "relation",
       "relation": "oneToOne",
       "target": "api::gpt.gpt"
+    },
+    "isGpt": {
+      "type": "boolean",
+      "default": false
     }
   }
 }

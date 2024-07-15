@@ -20,6 +20,15 @@ module.exports = {
 			},
 			{
 				method: "POST",
+				path: "/document/uploadTextEmbadding",
+				handler: "document.uploadTextEmbadding",
+				config: {
+						policies: [],
+						middlewares: [],
+				},
+		},
+			{
+				method: "POST",
 				path: "/document/fileEmbadding",
 				handler: "custom.uploadFileEmbadding",
 				config: {
