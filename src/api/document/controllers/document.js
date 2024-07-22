@@ -20,7 +20,7 @@ const slugify = require('slugify').default;
 const SupabaseVectorStoreCustom = require("../../../../util/supabase.js");
 const { CheerioWebBaseLoader } = require("langchain/document_loaders/web/cheerio");
 const { PuppeteerWebBaseLoader } = require("langchain/document_loaders/web/puppeteer");
-const Promise = require('bluebird'); 
+const Promise = require('bluebird');
 const fs = Promise.promisifyAll(require('fs'));
 const chunkSize = 5000;
 const chunkOverlap = 500;
@@ -29,17 +29,17 @@ const textSplitter = new RecursiveCharacterTextSplitter({
 	chunkOverlap: chunkOverlap,
 });
 
-const DocumentSitemapQueue = require("../../../../util/queue/document-queue.js");
+const DocumentURLQueue = require("../../../../util/queue/url-queue.js");
 
 const DocumentTextQueue = require("../../../../util/queue/text-queue.js");
 
 module.exports = createCoreController('api::document.document', ({ strapi }) => ({
 
-
+  // esta funcion es para lo que se añaden desde el chat
 	async uploadEmbadding(ctx) {
 		try {
 			const { user } = ctx.state;
-			
+
 			if (!user) return ctx.unauthorized("Unauthorized", { message: 'Unauthorized' });
 
 
@@ -58,7 +58,7 @@ module.exports = createCoreController('api::document.document', ({ strapi }) => 
 			};
 			let buffer = await fs.promises.readFile(file.path);
 
-			// busco el cliente 
+			// busco el cliente
 
 			let clienteEmpresa = await strapi.db.query('api::client.client').findOne(
 
@@ -71,7 +71,7 @@ module.exports = createCoreController('api::document.document', ({ strapi }) => 
 
 			);
 
-			
+
 
 			if (!clienteEmpresa) return ctx.badRequest("Client not found", { message: 'Client not found' });
 
@@ -199,7 +199,7 @@ module.exports = createCoreController('api::document.document', ({ strapi }) => 
 		});
 		strapi.log.debug(error);
 			return ctx.badRequest("Error", { message: error });
-			 
+
 		}
 
 
@@ -210,13 +210,10 @@ module.exports = createCoreController('api::document.document', ({ strapi }) => 
 			return ctx.send({ message: 'File uploaded' });
 		} catch (error) {
 
-		
+
 			strapi.log.debug(error)
 
 		}
-
-
-
 	},
 
 	async uploadUrlEmbadding(ctx) {
@@ -255,7 +252,7 @@ module.exports = createCoreController('api::document.document', ({ strapi }) => 
       await this.processFile(file, fileNameNoExt, grupoIncrustacion.id);
     }
 					console.log(user, grupoIncrustacion.id);
-    const documentQueue = new DocumentSitemapQueue(user, grupoIncrustacion.id);
+    const documentQueue = new DocumentURLQueue(user, grupoIncrustacion.id);
     if (type === 'txt') {
       url = file;
     }
@@ -266,7 +263,7 @@ module.exports = createCoreController('api::document.document', ({ strapi }) => 
       minLenChar: 200, recursivity, type
     });
 
-			
+
 
     return ctx.send({ message: 'File uploaded' });
   } catch (error) {
@@ -402,7 +399,7 @@ async getOrCreateGrupoIncrustacion(clienteEmpresa, nombreFile, userId, info, typ
   if (!grupoIncrustacion) {
     let data = { title: nombreFile, client: clienteEmpresa.id, create: userId };
     if (type == 'url') {
-      data.remote_url =  info;
+      data.remoteUrl =  info;
     }
 
 				if (type == 'text') {

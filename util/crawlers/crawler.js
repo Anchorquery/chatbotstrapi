@@ -25,7 +25,10 @@ class Crawler {
     let $;
     if (this.usePuppeteer) {
       console.log(`Loading page with puppeteer ${doc.url}`);
-      $ = await this.loadPageWithPuppeteer(doc.url);
+      let contenido = await this.loadPageWithPuppeteer(doc.url);
+
+      $ =  cheerio.load(contenido);
+      console.log("returning cheerio object",$);
     } else {
       console.log(`Loading page with cheerio ${doc.url}`);
       $ = cheerio.load(doc.res.body);
@@ -69,8 +72,9 @@ class Crawler {
     await page.goto(url, { waitUntil: 'networkidle2' });
     const content = await page.content();
     await browser.close();
-   const contenido = await cheerio.load(content);
-    return contenido;
+
+
+    return content;
   }
 
   async start() {

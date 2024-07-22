@@ -50,12 +50,14 @@
       "enum": [
         "file",
         "url",
+        "text",
         "sitemap",
         "folder"
       ]
     },
     "state": {
-      "type": "boolean"
+      "type": "boolean",
+      "default": true
     },
     "content": {
       "type": "customField",

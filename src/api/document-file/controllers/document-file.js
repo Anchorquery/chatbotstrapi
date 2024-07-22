@@ -1,5 +1,7 @@
 'use strict';
 
+const { type } = require('../../../plugins/ai-dashboard/server/routes/admin');
+
 /**
 	* document-file controller
 	*/
@@ -58,7 +60,7 @@ module.exports = createCoreController('api::document-file.document-file', ({ str
 
 		// recorro los que son carpetas y actualizo el numero de documentos
 
-		
+
 
 
 		return ctx.send({ uuid: document.uuid })
@@ -108,7 +110,7 @@ module.exports = createCoreController('api::document-file.document-file', ({ str
 			data: {
 				title,
 				content,
-				words  
+				words
 			}
 		});
 
@@ -278,7 +280,7 @@ strapi.log.debug(ctx.request.body.data);
 
 		if (!user) return ctx.unauthorized("Unauthorized");
 
-		
+
 		let { _limit, _page, _sort, _q, _where } = ctx.query;
 
 		 _limit = _limit ? parseInt(_limit) : 10;
@@ -287,7 +289,7 @@ strapi.log.debug(ctx.request.body.data);
 			_q = _q ? _q : '';
 		 // calculo el numero de paginas a saltar o offset
 
-			const _offset =  (_page - 1) * _limit;			
+			const _offset =  (_page - 1) * _limit;
 		let _items = [];
 		let nombreParent	= {
 			title: 'Home'
@@ -371,9 +373,9 @@ strapi.log.debug(ctx.request.body.data);
 				// @ts-ignore
 				_items[i].items = cantidadFolder;
 
-				
 
-				
+
+
 
 			}
 
@@ -458,7 +460,7 @@ strapi.log.debug(ctx.request.body.data);
 
 		}
 
-		
+
 		if (_client !== null && _client !== undefined && _client !== "null" && _client) {
 			where.client = _client;
 		}
@@ -491,7 +493,7 @@ strapi.log.debug(ctx.request.body.data);
 		const _offset =  (_page - 1) * _limit;
 		let _items =[];
 		if(!where.isTag){
-		
+
 			_items = await strapi.db.query("api::grupo-de-incrustacion.grupo-de-incrustacion").findWithCount({
 				limit: _limit,
 				offset: _offset,
@@ -534,16 +536,125 @@ strapi.log.debug(ctx.request.body.data);
 
 
 			_items.forEach( item => {
-	
-	item.isTag = _type == "true" ? true :false; 
-	
+
+	item.isTag = _type == "true" ? true :false;
+
 });
 
 
 
 			const _lastPage = Math.ceil(_total / _limit);
 			return ctx.send({ data: _items, meta: { pagination: { page: _page, limit: _limit, total: _total, lastPage: _lastPage } } });
-	}
+	},
+
+  async deleteMany(ctx) {
+
+    const { user } = ctx.state;
+
+    if (!user) return ctx.unauthorized("Unauthorized", { error: 'No autorizado' });
+
+    let { _where } = ctx.query;
+
+    if (!_where) return ctx.badRequest("where is required", { error: 'Envie el where' });
+
+    // verifico exista el documento y pertenezca al usuario
+
+    let documents = await strapi.db.query('api::document-file.document-file').findMany({
+      where: {
+        ..._where,
+      //  create: user.id
+      }
+    });
+
+    if (!documents) return ctx.badRequest("document not found or not belong to user");
+
+    // reemplazo el id del params que es en realidad un uuid por el document.id
+
+    ctx.params.id = documents.map((doc) => doc.id);
+
+    // @ts-ignore
+    return await super.deleteMany(ctx);
+  },
+
+  async getInfobaseData(ctx) {
+
+    const { user } = ctx.state;
+
+    if (!user) return ctx.unauthorized("Unauthorized");
+
+    const { uuid } = ctx.params;
+
+    if (!uuid) return ctx.badRequest("uuid is required", { error: 'Envie el uuid del documento' });
+
+    // verifico exista el documento y pertenezca al usuario
+
+    let document = await strapi.db.query('api::grupo-de-incrustacion.grupo-de-incrustacion').findOne({
+      where: {
+        uuid: uuid,
+
+      //  create: user.id
+      },
+
+      populate : {
+
+        tags: true,
+        client: true,
+        media: true,
+        create: true,
+      }
+
+    });
+
+
+    if (document.client) {
+      document.client = {
+        uuid: document.client.uuid,
+        name: document.client.name,
+        id : document.client.id
+      }
+    }
+
+    if (document.create) {
+
+      document.create = {
+        username: document.create.username,
+        name : document.create?.name + ' ' + document.create?.lastname,
+        id: document.create.id
+      }
+
+    }
+
+    if (document.media) {
+
+      document.media =  {
+        name : document.media.name,
+        url: process.env.URL + document.media.url,
+        id: document.media.id,
+        ext : document.media.ext,
+        mime: document.media.mime,
+        size: document.media.size,
+        width: document.media.width,
+        height: document.media.height,
+        hash: document.media.hash,
+
+
+
+      }
+
+    }
+
+
+    console.log(document);
+
+    if (!document) return ctx.badRequest("document not found or not belong to user");
+
+    return ctx.send(document);
+
+  },
+
+
+
+
 
 
 }));

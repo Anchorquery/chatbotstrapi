@@ -54,5 +54,24 @@ module.exports = {
 				middlewares: [],
 			},
 		},
+		{
+			method: "POST",
+			path: "/grupos-incrustacion/bulk-delete",
+			handler: "custom.bulkDeleteInfobase",
+			config: {
+				policies: [],
+				middlewares: [],
+			},
+		},
+    {
+			method: "DELETE",
+			path: "/grupos-incrustacion/delete/:uuid",
+			handler: "custom.delete",
+			config: {
+				policies: [],
+				middlewares: [],
+			},
+		},
+
 	],
 };

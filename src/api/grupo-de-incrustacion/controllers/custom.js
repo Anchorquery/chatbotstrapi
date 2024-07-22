@@ -220,8 +220,8 @@ module.exports = createCoreController('api::grupo-de-incrustacion.grupo-de-incru
 	async searchInDatabase(ctx, user, queryParams) {
 		const { _limit, _page, _sort, _q, _client, _isMe, _type, _isInfobase, _state } = queryParams;
 
-		let where = { queueState: "completed" };
-		
+		let where = {/* queueState: "completed" */};
+
 		if (_type && _type !== 'null') where.type = _type;
 		if (_isMe === true || _isMe === 'true') where.create = user.id;
 		if (_isInfobase === true || _isInfobase === 'true') where.infobase = _isInfobase;
@@ -239,8 +239,6 @@ module.exports = createCoreController('api::grupo-de-incrustacion.grupo-de-incru
 				sort: _sort,
 				populate: ["media", "client", "create", "tags"]
 			});
-
-			console.log(items)
 
 			items.forEach(element => {
 				element.create = element.create?.name ? `${element.create?.name} ${element.create?.lastName}` : element.create?.email;
@@ -296,14 +294,18 @@ module.exports = createCoreController('api::grupo-de-incrustacion.grupo-de-incru
 
 		const { uuid } = ctx.params;
 
-		let { title, client, state, tags } = ctx.request.body;
+
+
+		let { title, client, state, tags } = ctx.request.body.data;
+
+    console.log("tags aca", ctx.request.body.data)
 
 		client = await await strapi.db.query("api::client.client").findOne({
 			where: {
 				uuid: client
 			}
 		});
-		console.log("tags", tags)
+
 
 		tags = await this.procesarTags(tags);
 
@@ -619,7 +621,7 @@ module.exports = createCoreController('api::grupo-de-incrustacion.grupo-de-incru
 
 			if (!idDrive) {
 
-				// consulto la carpeta raiz para obtener le nombre y el id 
+				// consulto la carpeta raiz para obtener le nombre y el id
 
 				var folder = await drive.files.get({
 					fileId: 'root',
@@ -627,7 +629,7 @@ module.exports = createCoreController('api::grupo-de-incrustacion.grupo-de-incru
 					supportsAllDrives: true
 				});
 
-				
+
 
 			} else {
 				var folder = await drive.files.get({
@@ -654,7 +656,7 @@ console.log(folder.data)
 			});
 
 
-			// retorno el nombre de la carpeta para mostrarlo en el front 
+			// retorno el nombre de la carpeta para mostrarlo en el front
 
 
 			return ctx.send({
@@ -666,7 +668,7 @@ console.log(folder.data)
 			});
 
 		} catch (error) {
-			 
+
 			console.log(error)
 			return ctx.badRequest("Error", { error: true, message: error.message });
 		}
@@ -674,5 +676,93 @@ console.log(folder.data)
 
 
 	},
+
+  async bulkDeleteInfobase(ctx) {
+
+    const { user } = ctx.state;
+
+    if (!user) return ctx.unauthorized("Unauthorized");
+
+    let { items } = ctx.request.body.data;
+
+    if (!items  || items .length === 0) {
+      return ctx.badRequest("No se han proporcionado UUIDs");
+    }
+
+    // recorro los ids  y elimino los infobases
+
+    for (let id of items ) {
+
+      console.log(id)
+
+      let grupoIncrustacion = await strapi.db.query("api::grupo-de-incrustacion.grupo-de-incrustacion").findOne({
+        where: {
+          id
+        }
+      });
+
+
+
+      if (!grupoIncrustacion) {
+        return ctx.badRequest("Grupo de incrustacion no encontrado");
+      }
+
+      await strapi.db.query("api::grupo-de-incrustacion.grupo-de-incrustacion").delete({
+        where: {
+          id: grupoIncrustacion.id
+        }
+      });
+
+      await strapi.db.query("api::document.document").deleteMany({
+				where: {
+					grupoIncrustacion: {
+						$eq: grupoIncrustacion.id,
+					},
+				},
+			});
+
+    }
+
+    return ctx.send({ data: "ok" });
+
+  },
+
+  async delete (ctx) {
+
+    const { user } = ctx.state;
+
+    if (!user) return ctx.unauthorized("Unauthorized");
+
+    let { uuid } = ctx.params;
+
+    let grupoIncrustacion = await strapi.db.query("api::grupo-de-incrustacion.grupo-de-incrustacion").findOne({
+      where: {
+        uuid
+      }
+    });
+
+    if (!grupoIncrustacion) {
+      return ctx.badRequest("Grupo de incrustacion no encontrado");
+    }
+
+
+
+    await strapi.db.query("api::document.document").deleteMany({
+      where: {
+        grupoIncrustacion: {
+          $eq: grupoIncrustacion.id,
+        },
+      },
+    });
+    await strapi.db.query("api::grupo-de-incrustacion.grupo-de-incrustacion").delete({
+      where: {
+        id: grupoIncrustacion.id
+      }
+    });
+    return ctx.send({ data: "ok" });
+
+  }
+
+
 
 }));

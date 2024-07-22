@@ -93,7 +93,7 @@
       "type": "boolean",
       "default": false
     },
-    "remote_url": {
+    "remoteUrl": {
       "type": "string"
     },
     "driveId": {
@@ -101,6 +101,9 @@
     },
     "text": {
       "type": "richtext"
+    },
+    "error": {
+      "type": "text"
     }
   }
 }

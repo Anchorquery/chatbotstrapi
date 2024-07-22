@@ -1,5 +1,5 @@
-/*COLAS PARA ARCHIVOS, NO PARA URLS*/const Queue = require('bull');
-
+/*COLAS PARA ARCHIVOS, NO PARA URLS*/
+const Queue = require('bull');
 const { OpenAIEmbeddings } = require('langchain/embeddings/openai');
 const SupabaseVectorStoreCustom = require('../supabase.js');
 const clientS = require('../../util/superbase-client.js');
@@ -10,314 +10,254 @@ const { DocxLoader } = require('langchain/document_loaders/fs/docx');
 const { PDFLoader } = require('langchain/document_loaders/fs/pdf');
 const { TextLoader } = require('langchain/document_loaders/fs/text');
 const { documentosNoEstructurados } = require('../loader/Unstructured');
-const {REDIS_PASSWORD, REDIS_HOST,REDIS_PORT,REDIS_DB} = process.env;
+const { REDIS_PASSWORD, REDIS_HOST, REDIS_PORT, REDIS_DB } = process.env;
+
 const textSplitter = new RecursiveCharacterTextSplitter({
-	chunkSize: 2000,
-	chunkOverlap:100,
+  chunkSize: 5000,
+  chunkOverlap: 500,
 });
-const embading = new OpenAIEmbeddings(
 
-	{
-		openAIApiKey: process.env.OPENAI_API_KEY,
-		batchSize: 300,
-		modelName: 'text-embedding-ada-002',
+const embading = new OpenAIEmbeddings({
+  openAIApiKey: process.env.OPENAI_API_KEY,
+  batchSize: 300,
+  modelName: 'text-embedding-ada-002',
+});
 
-	}
-
-);
 const dbConfig = {
-	client: clientS,
-	tableName: 'documents',
-	query_name: 'match_documents_2',
+  client: clientS,
+  tableName: 'documents',
+  query_name: 'match_documents_2',
 };
-class DocumentQueue {
+
+class DocumentFileQueue {
   constructor(user, groupIncrust) {
     this.user = user;
     this.groupIncrust = groupIncrust;
     this.queue = new Queue('document-file-queue', {
       redis: {
-							host: REDIS_HOST,
-    			port: parseInt(REDIS_PORT),
-							password: REDIS_PASSWORD,
-						},
+        host: REDIS_HOST,
+        port: parseInt(REDIS_PORT),
+        password: REDIS_PASSWORD,
+      },
       limiter: {
-        max: 2,
-        duration: 1000,
+        max: 10,
+        duration: 2000,
       },
     });
-				try {
-					this.initializeQueue();
-				} catch (error) {
-						strapi.log.error(error)
-				}	
-    
+    this.initializeQueue();
   }
 
   initializeQueue() {
+    console.log('Initializing document file queue',this.groupIncrust);
     this.queue.process('document-file-queue', (job) => this.processDocument(job));
 
-   this.queue.on('waiting', (jobId) => this.onWaiting(jobId));
-    this.queue.on('active', (job, jobPromise) => this.onActive(job));
-    this.queue.on('completed', (job, result) => this.onCompleted(job,result));
+    this.queue.on('waiting', (jobId) => this.onWaiting(jobId));
+    this.queue.on('active', (job) => this.onActive(job));
+    this.queue.on('completed', (job, result) => this.onCompleted(job, result));
     this.queue.on('failed', (job, err) => this.onFailed(job, err));
     this.queue.on('error', (error) => this.onError(error));
     this.queue.on('removed', (job) => this.onRemoved(job));
     this.queue.on('progress', (job, progress) => this.onProgress(job, progress));
   }
 
-		async onWaiting(jobId) {
-			strapi.log.debug(`A job with ID ${jobId} is waiting`);
-			await this.updateGroupIncrustation('waiting', true);
-			this.emitMessageTask('waiting', `Tarea en espera`);
-			
-	}
+  async onWaiting(jobId) {
+    strapi.log.debug(`A job with ID ${jobId} is waiting`);
+    await this.updateGroupIncrustation('waiting', jobId, true);
+    this.emitMessageTask('waiting', 'Tarea en espera');
+  }
 
-	async onActive(job) {
-			strapi.log.debug(`A job with ID ${job.id} is active`);
-			await this.updateGroupIncrustation('active', true);
-			this.emitMessageTask('active', `Tarea en proceso`);
-			
-	}
+  async onActive(job) {
+    strapi.log.debug(`A job with ID ${job.id} is active`);
+    await this.updateGroupIncrustation('active', job.id, true);
+    this.emitMessageTask('active', 'Tarea en proceso');
+  }
 
-	async onCompleted(job,result) {
-			strapi.log.debug(`A job with ID ${job.id} has been completed`,result);
-			
-			await this.updateGroupIncrustation('completed', false);
-			this.emitMessageTask('completed', `Tarea completada`);
-			await this.queue.close();
-	}
+  async onCompleted(job, result) {
+    strapi.log.debug(`A job with ID ${job.id} has been completed`, result);
+    await this.updateGroupIncrustation('completed', job.id, false);
+    this.emitMessageTask('completed', 'Tarea completada');
+  }
 
-	async onFailed(job, err) {
+  async onFailed(job, err) {
+    strapi.log.error(`A job with ID ${job.id} has failed with ${err.message}`);
+    await this.updateGroupIncrustation('failed', job.id, false, err.message);
+    this.emitMessageTask('failed', `Tarea fallida: ${err.message}`);
+  }
 
-			strapi.log.debug(`A job with ID ${job.id} has failed with ${err.message}`);
-			await this.queue.close();
-	}
+  async onError(error) {
+    strapi.log.error(`Queue error: ${error}`);
+    await this.updateGroupIncrustation('error', null, false, error.message);
+    this.emitMessageTask('error', `Error en la tarea: ${error.message}`);
+  }
 
-	async onError(error) {
-			strapi.log.debug(`Queue error: ${error}`);
-			await this.queue.close();
-	}
+  async onRemoved(job) {
+    strapi.log.debug(`Job ${job.id} has been removed.`);
+    this.emitMessageTask('removed', 'Tarea removida');
+    await this.updateGroupIncrustation('removed', job.id, false);
+  }
 
-	async onRemoved(job) {
-			strapi.log.debug(`Job ${job.id} has been removed.`);
-			
-	}
+  onProgress(job, progress) {
+    this.emitMessageTask('progress', 'Tarea en proceso', progress);
+  }
 
-	onProgress(job, progress) {
-			this.emitMessageTask('progress', `Tarea en proceso`, progress);
-	}
+  emitMessageTask(type, message, progress = null) {
+    const payload = { type, message };
+    if (progress !== null) {
+      payload.progress = progress;
+    }
+    payload.grupoIncrustacion = this.groupIncrust;
+    // @ts-ignore
+    strapi.io.in(`user_${this.user.uuid}`).emit('messageTaskSchedule', payload);
+  }
 
-	emitMessageTask(type, message, progress = null, ) {
-			const payload = { type, message };
-			if (progress !== null) {
-					payload.progress = progress;
-			}
-
-payload.grupoIncrustacion = this.groupIncrust;
-			// @ts-ignore
-			strapi.io.in(`user_${this.user.uuid}`).emit('messageTaskSchedule', payload);
-	}
-
-	async updateGroupIncrustation(state, inQueue) {
-			await strapi.db.query('api::grupo-de-incrustacion.grupo-de-incrustacion').update({
-					where: { id: this.groupIncrust },
-					data: { queueState: state, inQueue: inQueue }
-			});
-	}
+  async updateGroupIncrustation(state, idQueue, inQueue, error = null) {
+    let data = {
+      queueState: state,
+      inQueue: inQueue,
+    };
+    if (idQueue) {
+      data.idQueue = idQueue;
+    }
+    if (error) {
+      data.error = error;
+    }
+    await strapi.db.query('api::grupo-de-incrustacion.grupo-de-incrustacion').update({
+      where: { id: this.groupIncrust },
+      data: data,
+    });
+  }
 
   addDocumentToQueue(data) {
     this.queue.add('document-file-queue', data);
   }
 
-		async processDocument(job) {
-			const {
-					nombreFile, clienteEmpresa, user,
-					grupoIncrustacion,file, infobase
-			} = job.data;
-	
-			try {
+  async processDocument(job) {
+    const { nombreFile, clienteEmpresa, user, file, infobase, tags } = job.data;
 
-	
+    try {
+      let docs = await this.createDocument(nombreFile, file, clienteEmpresa ? clienteEmpresa.nombre : null, tags);
 
-let docs =  await this.createDocumt(nombreFile, file, textSplitter, clienteEmpresa ? clienteEmpresa.nombre  : null)
+      let extraData = {
+        custom: true,
+        client: clienteEmpresa ? clienteEmpresa.id : null,
+        type: "file",
+        creator: user.id,
+        title: nombreFile,
+        infobase: infobase,
+        grupoIncrustacion: this.groupIncrust,
+      };
 
-					let extraData = {
-							custom: true,
-							client: clienteEmpresa ? clienteEmpresa.id : null,
-							type: "file",
-							creator: user.id,
-							title: nombreFile,
-							infobase:infobase,
-							grupoIncrustacion: this.groupIncrust,
-					};
-	
-					// @ts-ignore
-					await this.processDocs(job, docs, embading, { ...dbConfig, extraData });
-					job.moveToCompleted('done', true);
-			} catch (error) {
-					strapi.log.error('Error processing document:', error.message);
-					job.moveToFailed({ message: 'job failed' });
-						throw error.message;
-					
-			}
-	}
-	
+      // @ts-ignore
+      await this.processDocs(job, docs, embading, { ...dbConfig, extraData });
+      job.moveToCompleted('done', true);
+    } catch (error) {
+      strapi.log.error('Error processing document:', error.message);
+      await this.updateGroupIncrustation('failed', job.id, false, error.message);
+      this.emitMessageTask('failed', `Error en la tarea: ${error.message}`);
+      job.moveToFailed({ message: 'job failed' });
+      throw new Error(error.message);
+    }
+  }
 
-		async processDocs(job, docs, embedding, dbConfig) {
-			try {
-					// @ts-ignore
-					strapi.io.in(`user_${this.user.uuid}`).emit('messageTaskSchedule', {
-							type: 'message',
-							message: `Tarea en proceso, ${docs.length} documentos fueron encontrados, iniciando incrustación`,
-					});
-	
+  async processDocs(job, docs, embedding, dbConfig) {
+    try {
+      this.emitMessageTask('message', `Tarea en proceso, ${docs.length} documentos fueron encontrados, iniciando incrustación`);
 
-							try {
-			
+      await SupabaseVectorStoreCustom.fromDocuments(docs, embedding, dbConfig);
+      job.progress(100);
 
-								await SupabaseVectorStoreCustom.fromDocuments(docs, embedding, dbConfig);
-	
+      this.emitMessageTask('end', 'Tarea finalizada, el documento fue insertado');
+      await this.updateGroupIncrustation('completed', null, false);
+    } catch (error) {
+      strapi.log.error('Ocurrió un error al procesar las promesas:', error.message);
+      this.emitMessageTask('error', `Error en la tarea: ${error.message}`);
+      await this.updateGroupIncrustation('error', null, false, error.message);
+      job.moveToFailed({ message: 'job failed' });
+      throw new Error('Failed to process documents due to an error');
+    }
+  }
 
-									job.progress(100);
-							} catch (docError) {
-									// Log the error specific to the document processing but allow other documents to continue processing
-									strapi.log.error(`Error processing document: ${docError.message}`);
-							}
+  async createDocument(nombre, file, nameClient = null, tags = []) {
+    try {
+      const currentDirectory = __dirname;
+      const parentDirectory = path.join(currentDirectory, '../..');
+      const relativePath = "public" + file.url;
+      const absolutePath = path.join(parentDirectory, relativePath);
 
+      const format = file.ext;
+      let loader = null;
 
-						// @ts-ignore
-					strapi.io.in(`user_${this.user.uuid}`).emit('messageTaskSchedule', {
-							type: 'end',
-							message: `Tarea finalizada, el documento fue insertado`,
-					});
-	
-					// Actualización del estado en la base de datos
-				await strapi.db.query('api::grupo-de-incrustacion.grupo-de-incrustacion').update({
-							where: { id: this.groupIncrust },
-							data: { queueState: 'completed' },
-					});
-			} catch (error) {
-					// Captura de errores generales en el proceso de documentos
-					strapi.log.error('Ocurrió un error al procesar las promesas:', error.message);
-					throw new Error('Failed to process documents due to an error');
-			}
-	}
+      switch (format.toLowerCase()) {
+        case '.txt':
+          loader = new TextLoader(absolutePath);
+          break;
+        case '.csv':
+          loader = new CSVLoader(absolutePath);
+          break;
+        case '.pdf':
+          loader = new PDFLoader(absolutePath);
+          break;
+        case '.docx':
+          loader = new DocxLoader(absolutePath);
+          break;
+        default:
+          const documents = await documentosNoEstructurados(absolutePath);
+          return this.addMetadataToDocuments(documents, nombre, file.url, nameClient, tags);
+      }
 
-	async createDocumt(nombre, file, textSplitter, nameClient = null) {
+      let docs = await loader.loadAndSplit(textSplitter);
+      return this.addMetadataToDocuments(docs, nombre, file.url, nameClient);
+    } catch (error) {
+      strapi.log.error('Error creating documents:', error.message);
+      this.emitMessageTask('error', `Error en la tarea: ${error.message}`);
+      await this.updateGroupIncrustation('error', null, false, error.message);
+      throw new Error(`Failed to create documents: ${error.message}`);
+    }
+  }
 
-		try {
-			const currentDirectory = __dirname;
-
-			const parentDirectory = path.join(currentDirectory, '../..');
-
-			// Parte relativa de la URL
-			const relativePath = "public" + file.url;
-
-			// Combinar la ubicación del archivo con la parte relativa
-			const absolutePath = path.join(parentDirectory, relativePath);
-
+  async addMetadataToDocuments(docs, nombre, url, nameClient, tags = []) {
 
 
+    let chuckHeader = `DOCUMENT NAME: ${nombre} .\n\n`;
+    if (nameClient && nameClient !== 'null') {
+      chuckHeader += `PROPERTY DOCUMENT: ${nameClient}.\n\n`;
+    }
 
-			//saco el formato del archivo
+    if (tags && tags.length > 0) {
 
-			const format = file.ext;
+      // busco todos los tags por el id del array
 
+      tags = await strapi.db.query('api::tag.tag').findMany({
 
-			let loader = null;
-			if (format == '.txt' || format == '.TXT') {
+        where: {
 
-				loader = new TextLoader(
-					absolutePath
-				);
+          id: {
+            $in: tags
+          }
 
-			} else if (format == '.csv'  || format == '.CSV') {
+        },
+        select: ['title']
 
-				loader = new CSVLoader(
-					absolutePath
-				);
-
-			} else if (format == '.pdf' || format == '.PDF') {
-
-				loader = new PDFLoader(
-					absolutePath
-				);
-
-			} else if (format == '.docx' || format == '.DOCX') {
-
-				loader = new DocxLoader(
-
-					absolutePath
-
-				);
-
-			} else {
-
-				// uso documentosNoEstructurados
-
-				const documents = await documentosNoEstructurados(absolutePath);
-
-				let chuckHeader = `DOCUMENT NAME: ${nombre} . \n \n`;
-				if (nameClient) {
-					chuckHeader += `PROPERTY DOCUMENT: ${nameClient}.  \n \n`;
-				}
-
-				documents.forEach((doc) => {
-
-					doc.pageContent = chuckHeader + doc.pageContent;
-					doc.metadata = {
-						...doc.metadata,
-						client: nameClient,
-						file: nombre,
-						url : file.url
-					}
-
-				}
-
-				);
-
-				return documents;
-				
-
-			}
-			let docs = await loader.loadAndSplit(textSplitter);
-
-			let chuckHeader = `DOCUMENT NAME: ${nombre} . \n \n`;
-			if (nameClient) {
-				chuckHeader += `PROPERTY DOCUMENT: ${nameClient}.  \n \n`;
-			}
-
-
-			docs.forEach((doc) => {
-
-				doc.pageContent = chuckHeader + doc.pageContent;
-				doc.metadata = {
-					...doc.metadata,
-					client: nameClient,
-					file: nombre,
-					url : file.url
-				}
-
-			}
-
-			);
+      });
 
 
 
+      tags = tags.map((tag) => tag.title);
 
+      chuckHeader += `TAGS: ${tags.join(', ')}.\n\n`;
 
-			return docs;
-
-		} catch (error) {
-			strapi.log.debug(error);
-		}
-
-
-
-	}
-	
-
-	
+    }
+    return docs.map((doc) => ({
+      ...doc,
+      pageContent: chuckHeader + doc.pageContent,
+      metadata: {
+        ...doc.metadata,
+        client: nameClient,
+        file: nombre,
+        url: url,
+      },
+    }));
+  }
 }
 
-module.exports = DocumentQueue;
+module.exports = DocumentFileQueue;
