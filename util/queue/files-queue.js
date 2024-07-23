@@ -53,7 +53,7 @@ class DocumentFileQueue {
 
     this.queue.on('waiting', (jobId) => this.onWaiting(jobId));
     this.queue.on('active', (job) => this.onActive(job));
-    this.queue.on('completed', (job, result) => this.onCompleted(job, result));
+    this.queue.on('completed', (job) => this.onCompleted(job));
     this.queue.on('failed', (job, err) => this.onFailed(job, err));
     this.queue.on('error', (error) => this.onError(error));
     this.queue.on('removed', (job) => this.onRemoved(job));
@@ -72,8 +72,8 @@ class DocumentFileQueue {
     this.emitMessageTask('active', 'Tarea en proceso');
   }
 
-  async onCompleted(job, result) {
-    console.log(`A job with ID ${job.id} has been completed`, result);
+  async onCompleted(job) {
+    console.log(`A job with ID ${job.id} has been completed`);
     await this.updateGroupIncrustation('completed', job.id, false);
     this.emitMessageTask('completed', 'Tarea completada');
   }
