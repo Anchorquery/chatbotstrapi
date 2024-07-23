@@ -18,21 +18,17 @@ const textSplitter = new RecursiveCharacterTextSplitter({
 });
 
 const { REDIS_PASSWORD, REDIS_HOST, REDIS_PORT, REDIS_DB } = process.env;
-const embading = new OpenAIEmbeddings(
-
-  {
-    openAIApiKey: process.env.OPENAI_API_KEY,
-    batchSize: 300,
-    modelName: 'text-embedding-ada-002',
-
-  }
-
-);
+const embading = new OpenAIEmbeddings({
+  openAIApiKey: process.env.OPENAI_API_KEY,
+  batchSize: 300,
+  modelName: 'text-embedding-ada-002',
+});
 const dbConfig = {
   client: clientS,
   tableName: 'documents',
   query_name: 'match_documents_2',
 };
+
 class DocumentURLQueue {
   constructor(user, groupIncrust) {
     this.user = user;
@@ -44,7 +40,7 @@ class DocumentURLQueue {
         password: REDIS_PASSWORD,
       },
       limiter: {
-        max: 10,       // Máximo de 5 trabajos
+        max: 10,
         duration: 2000,
       },
     });
@@ -53,10 +49,10 @@ class DocumentURLQueue {
   }
 
   initializeQueue() {
-    this.queue.process('document-url-queue', (job) => this.processDocument(job));
+    this.queue.process('document-url-queue', 10, (job) => this.processDocument(job));
 
     this.queue.on('waiting', (jobId) => this.onWaiting(jobId));
-    this.queue.on('active', (job, jobPromise) => this.onActive(job));
+    this.queue.on('active', (job) => this.onActive(job));
     this.queue.on('completed', (job, result) => this.onCompleted(job));
     this.queue.on('failed', (job, err) => this.onFailed(job, err));
     this.queue.on('error', (error) => this.onError(error));
@@ -70,47 +66,33 @@ class DocumentURLQueue {
   }
 
   onActive(job) {
-    strapi.log.debug(`A job with ID ${job.id} is active`);
+    console.log(`A job with ID ${job.id} is active`);
     this.emitMessageTask('active', `Tarea en proceso`);
     this.updateGroupIncrustation('active', job.id, true);
   }
 
   async onCompleted(job) {
-    strapi.log.debug(`A job with ID ${job.id} has been completed`);
+    console.log(`A job with ID ${job.id} has been completed`);
     this.emitMessageTask('completed', `Tarea completada`);
     this.updateGroupIncrustation('completed', job.id, false);
-
-
   }
 
   async onFailed(job, err) {
-    strapi.log.debug(`A job with ID ${job.id} has failed with ${err.message}`);
-
+    console.log(`A job with ID ${job.id} has failed with ${err}`);
     this.emitMessageTask('failed', `Tarea fallida`);
-
-    this.updateGroupIncrustation('failed', job.id, false);
-
-
+    await this.updateGroupIncrustation('failed', job.id, false, err);
   }
 
   async onError(error) {
-    strapi.log.debug(`Queue error: ${error}`);
-
+    console.log(`Queue error: ${error}`);
     this.emitMessageTask('error', `Error en la tarea`);
-
-    this.updateGroupIncrustation('error', null, false, error);
-
-
-
+    await this.updateGroupIncrustation('error', null, false, error);
   }
 
   async onRemoved(job) {
-    strapi.log.debug(`Job ${job.id} has been removed.`);
-
+    console.log(`Job ${job.id} has been removed.`);
     this.emitMessageTask('removed', `Tarea removida`);
-
-    this.updateGroupIncrustation('removed', job.id, false);
-
+    //this.updateGroupIncrustation('removed', job.id, false);
   }
 
   onProgress(job, progress) {
@@ -127,22 +109,16 @@ class DocumentURLQueue {
   }
 
   async updateGroupIncrustation(state, idQueue, inQueue, error = null) {
-
     let data = {
       queueState: state,
-      inQueue: inQueue
-    }
-
+      inQueue: inQueue,
+    };
     if (idQueue) {
       data.idQueue = idQueue;
     }
-
     if (error) {
-
       data.error = error;
-
     }
-
     await strapi.db.query('api::grupo-de-incrustacion.grupo-de-incrustacion').update({
       where: { id: this.groupIncrust },
       data: data,
@@ -150,14 +126,18 @@ class DocumentURLQueue {
   }
 
   addDocumentToQueue(data) {
-    this.queue.add('document-url-queue', data);
+    console.log('Adding document to queue:', data);
+    this.queue.add('document-url-queue', data, {
+      attempts: 3, // Number of retry attempts
+
+    });
   }
 
   async processDocument(job) {
     const {
       urlOrTxt, nombreFile, clienteEmpresa, summarize, cleanHtml, puppeteer, user,
       grupoIncrustacion, filterUrl = [], blocksize = 0, blocknum = 0,
-      minLenChar = 200, recursivity = false, type = 'sitemap', tags = []
+      minLenChar = 200, recursivity = false, type = 'sitemap', tags = [], numberLimit = 0
     } = job.data;
 
     try {
@@ -168,12 +148,10 @@ class DocumentURLQueue {
         return;
       }
 
-      let limit = this.determineLimit(recursivity, type);
+      let limit = this.determineLimit(recursivity, type, numberLimit);
       let docs = await this.createDocumtUrlCrawler(nombreFile, urls, clienteEmpresa?.name, {
         limit, summarize, cleanHtml, puppeteer
       }, tags);
-
-
 
       let extraData = {
         custom: true,
@@ -189,23 +167,10 @@ class DocumentURLQueue {
       job.moveToCompleted('done', true);
     } catch (error) {
       console.log('Error processing document:', error.message);
-      // @ts-ignore
-      strapi.io.in(`user_${this.user.uuid}`).emit('messageTaskSchedule', {
-        type: 'error',
-        message: `Error en la tarea: ${error.message}`,
-      });
-
-      // actualizo base de datos
-
-      await strapi.db.query('api::grupo-de-incrustacion.grupo-de-incrustacion').update({
-
-        where: { id: this.groupIncrust },
-
-        data: { queueState: 'error', error: error.message },
-
-      });
-
+      this.emitMessageTask('error', `Error en la tarea: ${error.message}`);
+      await this.updateGroupIncrustation('error', job.id, false, error.message);
       job.moveToFailed({ message: 'job failed' });
+      throw new Error(error.message);
     }
   }
 
@@ -215,22 +180,22 @@ class DocumentURLQueue {
         // Lógica para cargar URLs desde un sitemap
         const sitemapLoader = new SiteMapLoader(urlOrTxt, filterUrl, blocksize, blocknum, minLenChar);
         return await sitemapLoader.load();
-
       case 'url':
         // Si es una URL individual, simplemente devuelve la URL como un arreglo
         return [urlOrTxt];
-
       case 'txt':
         // Lógica para cargar URLs desde un archivo de texto
         return await this.readUrlsFromTxt(urlOrTxt);
-
       default:
         // En caso de tipo desconocido o no soportado, devuelve un arreglo vacío
         return [];
     }
   }
 
-  determineLimit(recursivity, type) {
+  determineLimit(recursivity, type, number = 0) {
+    if (recursivity && number > 0) {
+      return number;
+    }
     // Ejemplo sencillo basado en recursividad y tipo
     if (recursivity && (type === 'url' || type === 'sitemap')) {
       // Poner un límite más alto si hay recursividad y el tipo es individual o sitemap
@@ -241,14 +206,9 @@ class DocumentURLQueue {
     }
   }
 
-
   async processDocs(job, docs, embedding, dbConfig) {
     try {
-      // @ts-ignore
-      strapi.io.in(`user_${this.user.uuid}`).emit('messageTaskSchedule', {
-        type: 'message',
-        message: `Tarea en proceso, ${docs.length} documentos fueron encontrados, iniciando incrustación`,
-      });
+      this.emitMessageTask('message', 'Tarea en proceso, iniciando incrustación');
 
       let completedTasks = 0;
       const totalTasks = docs.length;
@@ -268,40 +228,17 @@ class DocumentURLQueue {
         }
       }, { concurrency: 5 }); // Puedes ajustar la cantidad de promesas en paralelo
 
-      // Emitir evento de finalización al completar todas las tareas
-      // @ts-ignore
-      strapi.io.in(`user_${this.user.uuid}`).emit('messageTaskSchedule', {
-        type: 'end',
-        message: `Tarea finalizada, ${completedTasks} de ${totalTasks} documentos fueron insertados`,
-      });
+      this.emitMessageTask('end', `Tarea finalizada, ${completedTasks} de ${totalTasks} documentos fueron insertados`);
 
-      // Actualización del estado en la base de datos
-      await strapi.db.query('api::grupo-de-incrustacion.grupo-de-incrustacion').update({
-        where: { id: this.groupIncrust },
-        data: { queueState: 'finalizado' },
-      });
+      await this.updateGroupIncrustation('finalizado', null, false);
     } catch (error) {
-      // Captura de errores generales en el proceso de documentos
       console.error('Ocurrió un error al procesar las promesas:', error.message);
-
-      // Emitir evento de error al fallar la tarea
-
-      // @ts-ignore
-      strapi.io.in(`user_${this.user.uuid}`).emit('messageTaskSchedule', {
-        type: 'error',
-        message: `Error en la tarea: ${error.message}`,
-      });
-
-      // Actualización del estado en la base de datos
-
-      await strapi.db.query('api::grupo-de-incrustacion.grupo-de-incrustacion').update({
-        where: { id: this.groupIncrust },
-        data: { queueState: 'error', error: error.message },
-      });
+      this.emitMessageTask('error', `Error en la tarea: ${error.message}`);
+      await this.updateGroupIncrustation('error', null, false, error.message);
+      job.moveToFailed({ message: 'job failed' });
       throw new Error('Failed to process documents due to an error');
     }
   }
-
 
   async createDocumtUrlCrawler(nombre, urls, nameClient = null, options = {}, tags = []) {
     // Asegurarse de que las URLs sean un array.
@@ -327,56 +264,31 @@ class DocumentURLQueue {
       };
 
       // Inicializar y empezar el crawler.
-      // @ts-ignore
       const crawler = new Crawler(urls, limit, 200, puppeteer);
 
       const pages = await crawler.start();
 
-
-      // Procesar cada página extraída por el crawler.
       const documents = await Promise.all(pages.map(async page => {
-        // Limpiar HTML si es necesario.
         let textContent = cleanHtml ? convert(page.text, crawlerOptions) : page.text;
 
-        // Resumir contenido si es necesario.
         if (summarize) {
           // @ts-ignore
           textContent = await summarizeLongDocument({ document: textContent, forceSummarize: true });
         }
 
-        // Construir el encabezado del documento.
         let header = `DOCUMENT NAME: ${page.title}.\n\n`;
         if (nameClient && nameClient !== 'null') {
           header += `PROPERTY DOCUMENT: ${nameClient}.\n\n`;
         }
 
-
-
         if (tags && tags.length > 0) {
-
-          // busco todos los tags por el id del array
-
           tags = await strapi.db.query('api::tag.tag').findMany({
-
-            where: {
-
-              id: {
-                $in: tags
-              }
-
-            },
-            select: ['title']
-
+            where: { id: { $in: tags } },
+            select: ['title'],
           });
-
-
-
           tags = tags.map((tag) => tag.title);
-
           header += `TAGS: ${tags.join(', ')}.\n\n`;
-
         }
-
 
         let docs = await textSplitter.splitDocuments([
           new Document({
@@ -389,54 +301,27 @@ class DocumentURLQueue {
           }),
         ]);
 
-
-
-
         docs.forEach((doc) => {
-
           doc.pageContent = header + doc.pageContent;
           doc.metadata = {
             ...doc.metadata,
             client: nameClient,
             file: nombre,
             url: page.url
-          }
-
-        }
-
-        );
+          };
+        });
 
         return docs;
-
       }));
 
       return documents;
     } catch (error) {
-      console.error('PIla errores', error);
       console.error("Error in createDocumtUrlCrawler:", error.message);
-
-      // emito el error al cliente
-
-      // @ts-ignore
-      strapi.io.in(`user_${this.user.uuid}`).emit('messageTaskSchedule', {
-        type: 'error',
-        message: `Error en la tarea: ${error.message}`,
-      });
-
-      // actualizo base de datos
-
-      await strapi.db.query('api::grupo-de-incrustacion.grupo-de-incrustacion').update({
-
-        where: { id: this.groupIncrust },
-
-        data: { queueState: 'error', error: error.message },
-
-      });
-
+      this.emitMessageTask('error', `Error en la tarea: ${error.message}`);
+      await this.updateGroupIncrustation('error', null, false, error.message);
       throw new Error(`Failed to create documents from URLs: ${error.message}`);
     }
   }
-
 
   async readUrlsFromTxt(file) {
     try {
@@ -454,28 +339,12 @@ class DocumentURLQueue {
 
       return urls;
     } catch (error) {
-
-      //@ts-ignore
-      strapi.io.in(`user_${this.user.uuid}`).emit('messageTaskSchedule', {
-        type: 'error',
-        message: `Error en la tarea: ${error.message}`,
-      });
-
-      // actualizo base de datos
-
-      await strapi.db.query('api::grupo-de-incrustacion.grupo-de-incrustacion').update({
-
-        where: { id: this.groupIncrust },
-
-        data: { queueState: 'error', error: error.message },
-
-      });
-
+      this.emitMessageTask('error', `Error en la tarea: ${error.message}`);
+      await this.updateGroupIncrustation('error', null, false, error.message);
       console.error("Error reading URLs from txt file:", error.message);
       throw new Error(`Failed to read URLs from file: ${file.url}`);
     }
   }
-
 }
 
 module.exports = DocumentURLQueue;

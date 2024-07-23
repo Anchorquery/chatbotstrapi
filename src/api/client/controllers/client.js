@@ -6,6 +6,7 @@
 
 const { createCoreController } = require('@strapi/strapi').factories;
 const { Promise } = require('bluebird');
+const DocumentURLQueue = require('../../../../util/queue/url-queue');
 
 module.exports = createCoreController('api::client.client', ({ strapi }) => ({
 
@@ -86,7 +87,7 @@ module.exports = createCoreController('api::client.client', ({ strapi }) => ({
 					idDrive	: "",
 				}
 			}
-		});*/ 
+		});*/
 
 		// creo el cliente con entity server
 
@@ -113,9 +114,9 @@ module.exports = createCoreController('api::client.client', ({ strapi }) => ({
 
 
 
-		// creo un gpt 
+		// creo un gpt
 
-		
+
 
 
 		Promise.all ([
@@ -138,7 +139,7 @@ module.exports = createCoreController('api::client.client', ({ strapi }) => ({
 			})]
 		);
 
-		
+
 
 		return ctx.send({
 			message: 'Client created',
@@ -286,16 +287,16 @@ module.exports = createCoreController('api::client.client', ({ strapi }) => ({
 
 		}
 
-		
+
 		if(clientModel.gpt){
 			await strapi.db.query('api::gpt.gpt').delete({
 
 				where: {
-	
+
 					id: clientModel.gpt.id
-	
+
 				},
-	
+
 			})
 		}
 
@@ -368,7 +369,7 @@ module.exports = createCoreController('api::client.client', ({ strapi }) => ({
 				uuid: uuid,
 				user: user.id
 			},
-			populate: ['folder']
+			populate: ['folder','grupoIncrustacionUrl', 'grupoIncrustacionInfo']
 
 		});
 
@@ -404,6 +405,93 @@ module.exports = createCoreController('api::client.client', ({ strapi }) => ({
 				}
 			})
 		]);
+
+    // si la url del sitio fue maanda la incrusto
+
+    if (siteUrl) {
+      let recursivity = true;
+      let summarize = false;
+      let cleanHtml = true;
+      let puppeteer = false;
+
+      let tags = [];
+
+      let grupoIncrustacionUrl = await strapi.db.query('api::grupo-de-incrustacion.grupo-de-incrustacion').findOne({
+
+        where: {
+
+          client: client.id,
+
+          type: 'url'
+
+        }
+
+      });
+
+
+
+      // si no existe el grupo de incrustacion lo creo
+
+      if (!grupoIncrustacionUrl) {
+
+        grupoIncrustacionUrl = await strapi.db.query('api::grupo-de-incrustacion.grupo-de-incrustacion').create({
+
+          data: {
+
+            title: `Información sitio web ${name}`,
+            client: client.id,
+            user: user.id,
+            type: 'url',
+            remoteUrl: siteUrl,
+
+
+          }
+
+        });
+      }
+
+
+
+
+
+
+      const documentQueue = new DocumentURLQueue(user, grupoIncrustacionUrl.id);
+      documentQueue.addDocumentToQueue({
+        urlOrTxt: siteUrl, nombreFile:name, clienteEmpresa:client , summarize, cleanHtml, puppeteer,
+        tags, user, grupoIncrustacion:grupoIncrustacionUrl, filterUrl: [], blocksize: 0, blocknum: 0,
+        minLenChar: 50, recursivity, type : 'url',numberLimit: 5
+      });
+
+
+
+
+    }
+
+    /*if (description){
+
+      let grupoIncrustacionInfo = client.grupoIncrustacionInfo;
+      if (!grupoIncrustacionInfo) {
+
+        grupoIncrustacionInfo = await strapi.db.query('api::grupo-de-incrustacion.grupo-de-incrustacion').create({
+
+          data: {
+
+            title: `Información sobre ${name}`,
+            user: user.id,
+            client: client.id,
+            type: 'text',
+
+          }
+
+        });
+
+        grupoIncrustacionInfo = grupoIncrustacionInfo.id;
+
+      }
+
+    }*/
+
+
 
 		return ctx.send({
 			message: 'Client updated',

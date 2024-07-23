@@ -76,6 +76,16 @@
       "type": "component",
       "repeatable": false,
       "component": "carpeta.carpeta"
+    },
+    "grupoIncrustacionUrl": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::grupo-de-incrustacion.grupo-de-incrustacion"
+    },
+    "grupoIncrustacionInfo": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::grupo-de-incrustacion.grupo-de-incrustacion"
     }
   }
 }

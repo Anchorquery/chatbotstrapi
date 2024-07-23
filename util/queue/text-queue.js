@@ -42,7 +42,7 @@ class DocumentQueue {
   }
 
   initializeQueue() {
-    this.queue.process('document-text-queue', (job) => this.processDocument(job));
+    this.queue.process('document-text-queue', 10, (job) => this.processDocument(job));
 
     this.queue.on('waiting', (jobId) => this.onWaiting(jobId));
     this.queue.on('active', (job) => this.onActive(job));
@@ -59,33 +59,33 @@ class DocumentQueue {
   }
 
   onActive(job) {
-    strapi.log.debug(`A job with ID ${job.id} is active`);
+    console.log(`A job with ID ${job.id} is active`);
     this.emitMessageTask('active', 'Tarea en proceso');
     this.updateGroupIncrustation('active', job.id, true);
   }
 
   async onCompleted(job, result) {
-    strapi.log.debug(`A job with ID ${job.id} has been completed`);
+    console.log(`A job with ID ${job.id} has been completed`);
     this.emitMessageTask('completed', 'Tarea completada');
     this.updateGroupIncrustation('completed', job.id, false);
   }
 
   async onFailed(job, err) {
-    strapi.log.error(`A job with ID ${job.id} has failed with ${err.message}`);
-    this.emitMessageTask('failed', `Tarea fallida: ${err.message}`);
-    await this.updateGroupIncrustation('failed', job.id, false, err.message);
+    strapi.log.error(`A job with ID ${job.id} has failed with ${err}`);
+    this.emitMessageTask('failed', `Tarea fallida: ${err}`);
+    await this.updateGroupIncrustation('failed', job.id, false, err);
   }
 
   async onError(error) {
     strapi.log.error(`Queue error: ${error}`);
-    this.emitMessageTask('error', `Error en la tarea: ${error.message}`);
-    await this.updateGroupIncrustation('error', null, false, error.message);
+    this.emitMessageTask('error', `Error en la tarea: ${error}`);
+    await this.updateGroupIncrustation('error', null, false, error);
   }
 
   async onRemoved(job) {
-    strapi.log.debug(`Job ${job.id} has been removed.`);
+    console.log(`Job ${job.id} has been removed.`);
     this.emitMessageTask('removed', 'Tarea removida');
-    this.updateGroupIncrustation('removed', job.id, false);
+    //this.updateGroupIncrustation('removed', job.id, false);
   }
 
   onProgress(job, progress) {
@@ -117,7 +117,10 @@ class DocumentQueue {
   }
 
   addDocumentToQueue(data) {
-    this.queue.add('document-text-queue', data);
+    this.queue.add('document-text-queue', data, {
+      attempts: 3, // Number of retry attempts
+
+    });
   }
 
   async processDocument(job) {
@@ -140,9 +143,9 @@ class DocumentQueue {
       await this.processDocs(job, docs, embading, { ...dbConfig, extraData });
       job.moveToCompleted('done', true);
     } catch (error) {
-      strapi.log.error('Error processing document:', error.message);
-      this.emitMessageTask('error', `Error en la tarea: ${error.message}`);
-      await this.updateGroupIncrustation('failed', job.id, false, error.message);
+      strapi.log.error('Error processing document:', error);
+      this.emitMessageTask('error', `Error en la tarea: ${error}`);
+      await this.updateGroupIncrustation('failed', job.id, false, error);
       job.moveToFailed({ message: 'job failed' });
       throw new Error(error.message);
     }
@@ -158,9 +161,9 @@ class DocumentQueue {
       this.emitMessageTask('end', 'Tarea finalizada, el documento fue insertado');
       await this.updateGroupIncrustation('completed', null, false);
     } catch (error) {
-      strapi.log.error('Error processing documents:', error.message);
-      this.emitMessageTask('error', `Error en la tarea: ${error.message}`);
-      await this.updateGroupIncrustation('error', null, false, error.message);
+      strapi.log.error('Error processing documents:', error);
+      this.emitMessageTask('error', `Error en la tarea: ${error}`);
+      await this.updateGroupIncrustation('error', null, false, error);
       job.moveToFailed({ message: 'job failed' });
       throw new Error('Failed to process documents due to an error');
     }
@@ -174,28 +177,18 @@ class DocumentQueue {
       }
 
       if (tags && tags.length > 0) {
-
         // busco todos los tags por el id del array
-
         tags = await strapi.db.query('api::tag.tag').findMany({
-
           where: {
-
             id: {
               $in: tags
             }
-
           },
           select: ['title']
-
         });
 
-
-
         tags = tags.map((tag) => tag.title);
-
         chuckHeader += `TAGS: ${tags.join(', ')}.\n\n`;
-
       }
 
       const textChunks = await textSplitter.splitText(text);

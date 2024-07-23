@@ -48,8 +48,8 @@ class DocumentFileQueue {
   }
 
   initializeQueue() {
-    console.log('Initializing document file queue',this.groupIncrust);
-    this.queue.process('document-file-queue', (job) => this.processDocument(job));
+    console.log('Initializing document file queue', this.groupIncrust);
+    this.queue.process('document-file-queue', 10, (job) => this.processDocument(job));
 
     this.queue.on('waiting', (jobId) => this.onWaiting(jobId));
     this.queue.on('active', (job) => this.onActive(job));
@@ -61,39 +61,39 @@ class DocumentFileQueue {
   }
 
   async onWaiting(jobId) {
-    strapi.log.debug(`A job with ID ${jobId} is waiting`);
+    console.log(`A job with ID ${jobId} is waiting`);
     await this.updateGroupIncrustation('waiting', jobId, true);
     this.emitMessageTask('waiting', 'Tarea en espera');
   }
 
   async onActive(job) {
-    strapi.log.debug(`A job with ID ${job.id} is active`);
+    console.log(`A job with ID ${job.id} is active`);
     await this.updateGroupIncrustation('active', job.id, true);
     this.emitMessageTask('active', 'Tarea en proceso');
   }
 
   async onCompleted(job, result) {
-    strapi.log.debug(`A job with ID ${job.id} has been completed`, result);
+    console.log(`A job with ID ${job.id} has been completed`, result);
     await this.updateGroupIncrustation('completed', job.id, false);
     this.emitMessageTask('completed', 'Tarea completada');
   }
 
   async onFailed(job, err) {
-    strapi.log.error(`A job with ID ${job.id} has failed with ${err.message}`);
+    console.log(`A job with ID ${job.id} has failed with ${err.message}`);
     await this.updateGroupIncrustation('failed', job.id, false, err.message);
     this.emitMessageTask('failed', `Tarea fallida: ${err.message}`);
   }
 
   async onError(error) {
-    strapi.log.error(`Queue error: ${error}`);
-    await this.updateGroupIncrustation('error', null, false, error.message);
+    console.log(`Queue error: ${error}`);
+    await this.updateGroupIncrustation('error', null, false, error);
     this.emitMessageTask('error', `Error en la tarea: ${error.message}`);
   }
 
   async onRemoved(job) {
-    strapi.log.debug(`Job ${job.id} has been removed.`);
+    console.log(`Job ${job.id} has been removed.`);
     this.emitMessageTask('removed', 'Tarea removida');
-    await this.updateGroupIncrustation('removed', job.id, false);
+    //await this.updateGroupIncrustation('removed', job.id, false);
   }
 
   onProgress(job, progress) {
@@ -128,7 +128,10 @@ class DocumentFileQueue {
   }
 
   addDocumentToQueue(data) {
-    this.queue.add('document-file-queue', data);
+    this.queue.add('document-file-queue', data, {
+      attempts: 3, // Number of retry attempts
+
+    });
   }
 
   async processDocument(job) {
@@ -151,7 +154,7 @@ class DocumentFileQueue {
       await this.processDocs(job, docs, embading, { ...dbConfig, extraData });
       job.moveToCompleted('done', true);
     } catch (error) {
-      strapi.log.error('Error processing document:', error.message);
+      console.log('Error processing document:', error);
       await this.updateGroupIncrustation('failed', job.id, false, error.message);
       this.emitMessageTask('failed', `Error en la tarea: ${error.message}`);
       job.moveToFailed({ message: 'job failed' });
@@ -169,7 +172,7 @@ class DocumentFileQueue {
       this.emitMessageTask('end', 'Tarea finalizada, el documento fue insertado');
       await this.updateGroupIncrustation('completed', null, false);
     } catch (error) {
-      strapi.log.error('Ocurrió un error al procesar las promesas:', error.message);
+      console.log('Ocurrió un error al procesar las promesas:', error.message);
       this.emitMessageTask('error', `Error en la tarea: ${error.message}`);
       await this.updateGroupIncrustation('error', null, false, error.message);
       job.moveToFailed({ message: 'job failed' });
@@ -208,7 +211,7 @@ class DocumentFileQueue {
       let docs = await loader.loadAndSplit(textSplitter);
       return this.addMetadataToDocuments(docs, nombre, file.url, nameClient);
     } catch (error) {
-      strapi.log.error('Error creating documents:', error.message);
+      console.log('Error creating documents:', error.message);
       this.emitMessageTask('error', `Error en la tarea: ${error.message}`);
       await this.updateGroupIncrustation('error', null, false, error.message);
       throw new Error(`Failed to create documents: ${error.message}`);
@@ -216,36 +219,24 @@ class DocumentFileQueue {
   }
 
   async addMetadataToDocuments(docs, nombre, url, nameClient, tags = []) {
-
-
     let chuckHeader = `DOCUMENT NAME: ${nombre} .\n\n`;
     if (nameClient && nameClient !== 'null') {
       chuckHeader += `PROPERTY DOCUMENT: ${nameClient}.\n\n`;
     }
 
     if (tags && tags.length > 0) {
-
       // busco todos los tags por el id del array
-
       tags = await strapi.db.query('api::tag.tag').findMany({
-
         where: {
-
           id: {
             $in: tags
           }
-
         },
         select: ['title']
-
       });
 
-
-
       tags = tags.map((tag) => tag.title);
-
       chuckHeader += `TAGS: ${tags.join(', ')}.\n\n`;
-
     }
     return docs.map((doc) => ({
       ...doc,

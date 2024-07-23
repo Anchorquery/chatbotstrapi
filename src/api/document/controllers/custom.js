@@ -249,7 +249,7 @@ module.exports = createCoreController('api::document.document', ({ strapi }) => 
   async construirEntidadArchivo(file, grupoIncrustacion, fileNameNoExt) {
     console.log("file", file)
     let buffer = await fs.promises.readFile(file.path);
-    strapi.log.debug("grupoIncrustacion", grupoIncrustacion)
+    console.log("grupoIncrustacion", grupoIncrustacion)
     const tmpWorkingDirectory = await fse.mkdtemp(path.join(os.tmpdir(), 'strapi-upload-'));
 
     return {
